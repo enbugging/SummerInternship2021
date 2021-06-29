@@ -1,3 +1,16 @@
-#include <vector>
+#include <bits/stdc++.h>
+using namespace std;
 
-vector<double> simulatedAnnealing(int number_of_terms, vector<double> angles, vector<double> quantum_mechanics_data_points);
+double square_error(
+    vector<double> force_constant,
+    vector<double> angles,
+    vector<double> quantum_mechanics_data_points);
+
+vector<double> simulatedAnnealing(
+    int number_of_steps, 
+    double initial_temperature, 
+    double initial_radius, 
+    double radius, 
+    int number_of_terms,
+    vector<double> angles,
+    vector<double> quantum_mechanics_data_points);

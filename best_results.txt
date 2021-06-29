@@ -1,0 +1,6 @@
+Force constants: 16.789386 -10.632115 -10.952189
+Square error: 10167.366419
+Force constants: -6.897950 10.319075 -10.993398
+Square error: 8815.255570
+Force constants: -1.169286 1.139883 -14.109784
+Square error: 13022.120898
