@@ -1,6 +1,10 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+double force_field_calculate(
+    vector<double> force_constants,
+    double angle);
+
 double square_error(
     vector<double> force_constant,
     vector<double> angles,

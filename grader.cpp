@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+
 using namespace std;
 
 #include "ExtremaFinding.h"
@@ -19,6 +20,7 @@ void preprocess()
 	// initialization
 	angles.resize(number_of_data_points);
 	quantum_mechanics_data_points.resize(number_of_data_points);
+	molecular_mechanics_data_points.resize(number_of_data_points);
 
 	// read input
 	ifstream quantum_mechanics_data_file;
@@ -41,7 +43,16 @@ void summary()
 		printf("%lf ", force_constants[i]);
 	}
 	double sum_of_squares_of_error = square_error(force_constants, angles, quantum_mechanics_data_points);
-	printf("\nSquare error: %lf", sqrt(sum_of_squares_of_error/number_of_data_points));
+	printf("\nSquare error: %lf\n", sqrt(sum_of_squares_of_error/number_of_data_points));
+	
+	for (int i = 0; i < number_of_data_points; i++)
+	{
+		molecular_mechanics_data_points[i] = force_field_calculate(force_constants, angles[i]);
+	}
+	for (int i = 0; i < number_of_data_points; i++)
+	{
+		printf("%lf %lf\n", molecular_mechanics_data_points[i], quantum_mechanics_data_points[i]);
+	}
 }
 
 int main()
@@ -51,16 +62,17 @@ int main()
 
 	/*
 	// simulated annealing
-	force_constants = simulatedAnnealing(50000, 0.5, 1, 0.3, number_of_terms, angles, quantum_mechanics_data_points);
+	force_constants = simulatedAnnealing(5000, 1000, 10, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
 
 	// grading
 	summary();
 	*/
+	
 	double average = 0;
 	vector<double> run;
 	for (int i = 0; i < 10; i++)
 	{
-		force_constants = simulatedAnnealing(5000, 1000, 1, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
+		force_constants = simulatedAnnealing(5000, 1, 30, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
 		double sum_of_squares_of_error = square_error(force_constants, angles, quantum_mechanics_data_points);
 		average += sqrt(sum_of_squares_of_error/number_of_data_points);
 		run.push_back(sqrt(sum_of_squares_of_error/number_of_data_points));
@@ -71,4 +83,5 @@ int main()
 		sd += (run[i] - average) * (run[i] - average);
 	}
 	printf("Average: %lf\nStandard deviation: %lf", average/10, sqrt(sd/10));
+	
 }
