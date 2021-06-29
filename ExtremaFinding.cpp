@@ -46,7 +46,7 @@ double random_step(
     return min + f * (max - min);
 }
 
-vector<double> simulatedAnnealing(
+vector<double> simulated_annealing(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
@@ -68,13 +68,13 @@ vector<double> simulatedAnnealing(
 
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * exp(-4.0 * i / number_of_steps);
+        double T = initial_temperature * (number_of_steps - i) / number_of_steps;
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
         for (int i = 0; i < number_of_terms; i++)
         {
-            new_force_constants[i] += random_step(-radius, radius);
+            new_force_constants[i] += random_step(-T, T);
             // random_step(-radius / (1 + i), radius / (1 + i));
             // random_step(-radius, radius);
         }
@@ -89,27 +89,54 @@ vector<double> simulatedAnnealing(
             best_square_error = new_square_error,
             force_constants = new_force_constants;
         }
+    }
 
-        vector<double> molecular_mechanics_data_points;
-        molecular_mechanics_data_points.resize((int) angles.size());
-            
-        if(0)
+    return force_constants;
+}
+
+vector<double> threshold_accepting(
+    int number_of_steps, 
+    double initial_temperature, 
+    double initial_radius, 
+    double radius, 
+    int number_of_terms,
+    vector<double> angles,
+    vector<double> quantum_mechanics_data_points)
+{
+    
+    // initialization
+    double best_square_error = numeric_limits<double>::max();
+    vector<double> force_constants;
+    force_constants.resize(number_of_terms);
+
+    // random initial set of parameters
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        force_constants[i] = random_step(-initial_radius, initial_radius);
+    }
+
+    for (int i = 0; i < number_of_steps; i++)
+    {
+        double T = initial_temperature * (number_of_steps - i) / number_of_steps;
+        vector<double> new_force_constants = force_constants;
+        
+        // random distortion to the parameters
+        for (int i = 0; i < number_of_terms; i++)
         {
-            for (int j = 0; j < (int) angles.size(); j++)
-            {
-                molecular_mechanics_data_points[j] = force_field_calculate(new_force_constants, angles[j]);
-            }
-            for (int j = 0; j < (int) angles.size(); j++)
-            {
-                printf("%lf %lf\n", molecular_mechanics_data_points[j], quantum_mechanics_data_points[j]);
-            }
-            printf("SUMMARY\n");
-            printf("---------------------------------------------\n");
-            printf("Temperature: %lf\n", T);
-            double sum_of_squares_of_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
-            printf("\nSquare error: %lf\n", sqrt(sum_of_squares_of_error/(int) angles.size()));
-            sum_of_squares_of_error = square_error(force_constants, angles, quantum_mechanics_data_points);
-            printf("\nBest square error: %lf\n", sqrt(sum_of_squares_of_error/(int) angles.size()));
+            new_force_constants[i] += random_step(-T, T);
+            // random_step(-radius / (1 + i), radius / (1 + i));
+            // random_step(-radius, radius);
+            // random_step(-T, T);
+        }
+        double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
+
+        // if the new set of parameters is better, then we accept
+        // else, we accept, with a probability corresponding to the temperature
+        // printf("%lf %lf %lf\n", T, new_square_error, best_square_error);
+        if (new_square_error <= best_square_error + T)
+        {
+            best_square_error = new_square_error,
+            force_constants = new_force_constants;
         }
     }
 

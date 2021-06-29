@@ -10,7 +10,16 @@ double square_error(
     vector<double> angles,
     vector<double> quantum_mechanics_data_points);
 
-vector<double> simulatedAnnealing(
+vector<double> simulated_annealing(
+    int number_of_steps, 
+    double initial_temperature, 
+    double initial_radius, 
+    double radius, 
+    int number_of_terms,
+    vector<double> angles,
+    vector<double> quantum_mechanics_data_points);
+
+vector<double> threshold_accepting(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
