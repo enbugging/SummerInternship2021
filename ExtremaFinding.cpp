@@ -59,6 +59,7 @@ vector<double> simulatedAnnealing(
     double best_square_error = numeric_limits<double>::max();
     vector<double> force_constants;
     force_constants.resize(number_of_terms);
+    double prev_square_error = 0;
 
     // random initial set of parameters
     for (int i = 0; i < number_of_terms; i++)
@@ -68,7 +69,7 @@ vector<double> simulatedAnnealing(
 
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * exp(-1.0 * i / number_of_steps);
+        double T = initial_temperature * exp(-4.0 * i / number_of_steps);
         vector<double> new_force_constants = force_constants;
         double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
 
@@ -80,12 +81,14 @@ vector<double> simulatedAnnealing(
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
-        if (new_square_error < best_square_error || random_step(0, 1) < T)
+        // printf("%lf %lf %lf\n", T, new_square_error, best_square_error);
+        if (new_square_error < best_square_error || 
+            random_step(0, 1) < exp((new_square_error - prev_square_error) / T))
         {
             best_square_error = new_square_error,
             force_constants = new_force_constants;
         }
-        //printf("%lf\n", best_square_error);
+        prev_square_error = new_square_error;
     }
 
     return force_constants;
