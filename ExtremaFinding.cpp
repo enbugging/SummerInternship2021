@@ -11,6 +11,8 @@ unsigned int
     seed = chrono::steady_clock::now().time_since_epoch().count();
 mt19937 rng(seed);
 
+normal_distribution<double> gaussian(0.0, 1.0);
+
 double force_field_calculate(
     vector<double> force_constants,
     double angle)
@@ -71,12 +73,10 @@ vector<double> simulated_annealing(
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
-        for (int i = 0; i < number_of_terms; i++)
+        for (int j = 0; j < number_of_terms; j++)
         {
-            new_force_constants[i] += 
-            // random_step(-radius / (1 + i), radius / (1 + i));
-            random_step(-T, T);
-            // random_step(-radius, radius);
+            new_force_constants[j] += 
+            T * tan(random_step(-M_PI/2, M_PI/2));
         }
         double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
 
@@ -121,12 +121,10 @@ vector<double> threshold_accepting(
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
-        for (int i = 0; i < number_of_terms; i++)
+        for (int j = 0; j < number_of_terms; j++)
         {
-            new_force_constants[i] += 
-            // random_step(-radius / (1 + i), radius / (1 + i));
-            random_step(-radius, radius);
-            // random_step(-T, T);
+            new_force_constants[j] += 
+            T * tan(random_step(-M_PI/2, M_PI/2));
         }
         double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
 
