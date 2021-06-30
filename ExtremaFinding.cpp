@@ -66,9 +66,14 @@ vector<double> simulated_annealing(
         force_constants[i] = random_step(-initial_radius, initial_radius);
     }
 
+    for(int i = 0; i < (int) angles.size(); i++)
+	{
+		printf("%lf %lf\n", force_field_calculate(force_constants, angles[i]), quantum_mechanics_data_points[i]);
+	}
+
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * (number_of_steps - i) / number_of_steps;
+        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 4);
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
@@ -117,7 +122,7 @@ vector<double> threshold_accepting(
 
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * (number_of_steps - i) / number_of_steps;
+        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 4);
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
