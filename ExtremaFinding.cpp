@@ -41,7 +41,7 @@ double random_step(
     double min,
     double max)
 {
-    double f = (double)rng() / ULONG_MAX;
+    double f = (double)rng() / UINT_MAX;
     return min + f * (max - min);
 }
 
