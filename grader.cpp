@@ -7,7 +7,7 @@ using namespace std;
 string
 	quantum_mechanics_data_url = "qm.dat";
 int
-	number_of_terms = 4,
+	number_of_terms = 3,
 	number_of_data_points = 36;
 vector<double>
 	angles,
@@ -75,9 +75,9 @@ int main()
 
 	
 	// simulated annealing
-	force_constants = simulated_annealing(3000, 1000, 2000, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
-	//force_constants = threshold_accepting(5000, 1000, 1000, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
-
+	force_constants = simulated_annealing(5000, 1, 3, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
+	//force_constants = threshold_accepting(5000, 50, 3, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
+		
 	// grading
 	summary();
 

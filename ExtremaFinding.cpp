@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -10,8 +11,6 @@ unsigned int
     seed = chrono::steady_clock::now().time_since_epoch().count();
 mt19937 rng(seed);
 
-int number_of_steps = 50000;
-
 double force_field_calculate(
     vector<double> force_constants,
     double angle)
@@ -19,7 +18,7 @@ double force_field_calculate(
     double E = 0;
     for (int i = 0; i < (int)force_constants.size(); i++)
     {
-        E += force_constants[i] * (1 + cos(multiplicities[i] * angle));
+        E += force_constants[i] * (1 + cos(multiplicities[i] * angle / 180.0 * M_PI));
     }
     return E;
 }
@@ -66,21 +65,17 @@ vector<double> simulated_annealing(
         force_constants[i] = random_step(-initial_radius, initial_radius);
     }
 
-    for(int i = 0; i < (int) angles.size(); i++)
-	{
-		printf("%lf %lf\n", force_field_calculate(force_constants, angles[i]), quantum_mechanics_data_points[i]);
-	}
-
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 4);
+        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 2);
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
         for (int i = 0; i < number_of_terms; i++)
         {
-            new_force_constants[i] += random_step(-T, T);
+            new_force_constants[i] += 
             // random_step(-radius / (1 + i), radius / (1 + i));
+            random_step(-T, T);
             // random_step(-radius, radius);
         }
         double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
@@ -122,15 +117,15 @@ vector<double> threshold_accepting(
 
     for (int i = 0; i < number_of_steps; i++)
     {
-        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 4);
+        double T = initial_temperature * pow(((double) (number_of_steps - i) / number_of_steps), 2);
         vector<double> new_force_constants = force_constants;
         
         // random distortion to the parameters
         for (int i = 0; i < number_of_terms; i++)
         {
-            new_force_constants[i] += random_step(-T, T);
+            new_force_constants[i] += 
             // random_step(-radius / (1 + i), radius / (1 + i));
-            // random_step(-radius, radius);
+            random_step(-radius, radius);
             // random_step(-T, T);
         }
         double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
