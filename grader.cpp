@@ -5,7 +5,7 @@ using namespace std;
 #include "ExtremaFinding.h"
 
 string
-	quantum_mechanics_data_url = "qm.dat";
+	quantum_mechanics_data_url = "charmm.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36;
@@ -46,11 +46,6 @@ void summary()
 	}
 	double sum_of_squares_of_error = square_error(force_constants, angles, quantum_mechanics_data_points);
 	printf("\nSquare error: %lf\n", sqrt(sum_of_squares_of_error/number_of_data_points));
-
-	for(int i = 0; i < number_of_data_points; i++)
-	{
-		printf("%lf %lf\n", force_field_calculate(force_constants, angles[i]), quantum_mechanics_data_points[i]);
-	}
 }
 
 int main()
@@ -62,11 +57,12 @@ int main()
 	// simulated annealing
 	//force_constants = simulated_annealing(5000, 1, 3, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
 	//force_constants = threshold_accepting(5000, 50, 3, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
+	force_constants = simulated_annealing_with_threshold(0.87, 5000, 10, 3, 0.5, number_of_terms, angles, quantum_mechanics_data_points);
 		
 	// grading
-	//summary();
+	summary();
 
-	
+	/*
 	double average = 0;
 	vector<double> run;
 	for (int i = 0; i < 10; i++)
@@ -83,5 +79,5 @@ int main()
 		sd += (run[i] - average) * (run[i] - average);
 	}
 	printf("Average: %lf\nStandard deviation: %lf", average/10, sqrt(sd/10));
-	
+	*/
 }
