@@ -2,19 +2,21 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#include "ExtremaFinding.h"
+#include "GlobalMinimumFinder.h"
 
-vector<int>
-	multiplicities = {1, 2, 3, 4, 6};
-// random seed, can be fixed for rerun of experiments
-unsigned int
-    seed = chrono::steady_clock::now().time_since_epoch().count();
-mt19937 rng(seed);
+/*	-----------------------------------------------------------------------------------
+ *	Utility functions, supporthing simulated-annealing-related functions
+ * */
+double GlobalMinimumFinder::random_step(
+    double min,
+    double max)
+{
+    double f = (double)rng() / UINT_MAX;
+    return min + f * (max - min);
+}
 
-normal_distribution<double> gaussian(0.0, 1.0);
-
-double force_field_calculate(
-    vector<double> force_constants,
+double GlobalMinimumFinder::force_field_calculate(
+    vector<double>& force_constants,
     double angle)
 {
     double E = 0;
@@ -25,73 +27,85 @@ double force_field_calculate(
     return E;
 }
 
-double square_error(
-    vector<double> force_constants,
-    vector<double> angles,
-    vector<double> quantum_mechanics_data_points)
+double GlobalMinimumFinder::rmse(
+    vector<double>& force_constants,
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_data_points)
 {
+    if (angles.empty()) return 0;
     double sum_of_squares_of_error = 0;
     for (int i = 0; i < (int)angles.size(); i++)
     {
         double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_data_points[i];
         sum_of_squares_of_error += error * error;
     }
+    sum_of_squares_of_error = sqrt(sum_of_squares_of_error/angles.size());
     return sum_of_squares_of_error;
 }
 
-double coefficient(
+double GlobalMinimumFinder::coefficient(
     double t, 
-    double threshold
-)
+    double threshold)
 {
-    double border_width = 0.002;
-    if (abs(t) >= threshold + border_width) return 1;
-    if (abs(t) < threshold) return 0;
-    return (1.0 - cos(M_PI / border_width * (abs(t) - threshold)))/2.0;
+    double
+        border_width = 0.001, 
+        A, 
+        B, 
+        extra_wall = 0, 
+        center = border_width + threshold;
+    if (abs(t) >= center) A = 1;
+    else if (abs(t) < threshold) A = 0;
+    else A = (1.0 - cos(M_PI / border_width * (abs(t) - threshold)))/2.0;
+
+    if (abs(abs(t) - center) < 2 * border_width) B = extra_wall * (1 + cos(M_PI / (2 * border_width) * (abs(t) - center)))/2.0;
+    else B = 0;
+    return A + B;
 }
 
-double square_error_with_threshold(
+double GlobalMinimumFinder::rmse_with_threshold(
     double threshold, 
-    vector<double> force_constants,
-    vector<double> angles,
-    vector<double> quantum_mechanics_data_points)
+    vector<double>& force_constants,
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_data_points)
 {
+    if (angles.empty()) return 0;
     vector<double> new_force_constants = force_constants;
+    double c = 0.225;
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
         new_force_constants[i] *= coefficient(force_constants[i], threshold);
     }
     double sum_of_squares_of_error = 0;
-    for (int i = 0; i < (int)angles.size(); i++)
+    for (int i = 0; i < (int) angles.size(); i++)
     {
         double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_data_points[i];
         sum_of_squares_of_error += error * error;
     }
+    sum_of_squares_of_error = sum_of_squares_of_error/angles.size();
+    for (int i = 0; i < (int) force_constants.size(); i++)
+    {
+        sum_of_squares_of_error += c * coefficient(force_constants[i], threshold) *  coefficient(force_constants[i], threshold);
+    }
     return sum_of_squares_of_error;
 }
 
-double random_step(
-    double min,
-    double max)
-{
-    double f = (double)rng() / UINT_MAX;
-    return min + f * (max - min);
-}
-
-
-vector<double> simulated_annealing(
+/*	-----------------------------------------------------------------------------------
+ *	Simulated annealing and its variants. The implementations used Cauchy mutation scheme
+ *  for best stability and power.
+ * */
+vector<double> GlobalMinimumFinder::simulated_annealing(
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_data_points, 
+    int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double radius, 
-    int number_of_terms,
-    vector<double> angles,
-    vector<double> quantum_mechanics_data_points)
+    double threshold)
 {
     // initialization
-    double best_square_error = numeric_limits<double>::max();
     vector<double> force_constants;
     force_constants.resize(number_of_terms);
+    double best_square_error = numeric_limits<double>::max();
 
     // random initial set of parameters
     for (int i = 0; i < number_of_terms; i++)
@@ -107,10 +121,9 @@ vector<double> simulated_annealing(
         // random distortion to the parameters
         for (int j = 0; j < number_of_terms; j++)
         {
-            new_force_constants[j] += 
-            T * tan(random_step(-M_PI/2, M_PI/2));
+            new_force_constants[j] += T * tan(random_step(-M_PI/2, M_PI/2));
         }
-        double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -122,23 +135,31 @@ vector<double> simulated_annealing(
         }
     }
 
+    // setting trapped coefficients to be zero
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        if (abs(force_constants[i]) < threshold)
+        {
+            force_constants[i] = 0;
+        }
+    }
+
     return force_constants;
 }
 
-vector<double> threshold_accepting(
+vector<double> GlobalMinimumFinder::threshold_accepting(
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_data_points, 
+    int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double radius, 
-    int number_of_terms,
-    vector<double> angles,
-    vector<double> quantum_mechanics_data_points)
+    double threshold)
 {
-    
     // initialization
-    double best_square_error = numeric_limits<double>::max();
     vector<double> force_constants;
     force_constants.resize(number_of_terms);
+    double best_square_error = numeric_limits<double>::max();
 
     // random initial set of parameters
     for (int i = 0; i < number_of_terms; i++)
@@ -154,10 +175,9 @@ vector<double> threshold_accepting(
         // random distortion to the parameters
         for (int j = 0; j < number_of_terms; j++)
         {
-            new_force_constants[j] += 
-            T * tan(random_step(-M_PI/2, M_PI/2));
+            new_force_constants[j] += T * tan(random_step(-M_PI/2, M_PI/2));
         }
-        double new_square_error = square_error(new_force_constants, angles, quantum_mechanics_data_points);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -168,18 +188,26 @@ vector<double> threshold_accepting(
         }
     }
 
+    // setting trapped coefficients to be zero
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        if (abs(force_constants[i]) < threshold)
+        {
+            force_constants[i] = 0;
+        }
+    }
+
     return force_constants;
 }
 
-vector<double> simulated_annealing_with_threshold(
-    double threshold, 
+vector<double> GlobalMinimumFinder::simulated_annealing_with_threshold(
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_data_points, 
+    int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double radius, 
-    int number_of_terms,
-    vector<double> angles,
-    vector<double> quantum_mechanics_data_points)
+    double threshold)
 {
     vector<double> best_force_constants;
     best_force_constants.resize(number_of_terms);
@@ -215,7 +243,7 @@ vector<double> simulated_annealing_with_threshold(
             {
                 if((mask >> j) & 1) new_force_constants[j] += T * tan(random_step(-M_PI/2, M_PI/2));
             }
-            double new_square_error = square_error_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
+            double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
 
             // if the new set of parameters is better, then we accept
             // else, we accept, with a probability corresponding to the temperature
@@ -245,7 +273,7 @@ vector<double> simulated_annealing_with_threshold(
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << "\nRMSE: " << sqrt(square_error(force_constants, angles, quantum_mechanics_data_points)/(double) angles.size()) << '\n';
+        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_data_points) << '\n';
         force_constants.clear();
     }
     
