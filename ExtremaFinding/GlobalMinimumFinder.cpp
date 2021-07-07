@@ -70,7 +70,7 @@ double GlobalMinimumFinder::rmse_with_threshold(
 {
     if (angles.empty()) return 0;
     vector<double> new_force_constants = force_constants;
-    double c = 0.225;
+    double c = 0.02;
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
         new_force_constants[i] *= coefficient(force_constants[i], threshold);
@@ -255,13 +255,13 @@ vector<double> GlobalMinimumFinder::simulated_annealing_with_threshold(
             }
         }
 
-        if (optimal_square_error > best_square_error)
-        // if (mask == (1<<number_of_terms) - 1)
+        //if (optimal_square_error > best_square_error)
+        if (mask == (1<<number_of_terms) - 1)
         {
             optimal_square_error = best_square_error;
             best_force_constants = force_constants;
         }
-
+        
         cerr << "Result for choosing harmonic(s) ";
         for(int i = 0; i < number_of_terms; i++)
         {

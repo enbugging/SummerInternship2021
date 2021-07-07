@@ -9,7 +9,7 @@ GlobalMinimumFinder global_minimum_finder = GlobalMinimumFinder();
 //LocalMinimaFinder local_minima_finder = LocalMinimaFinder();
 
 string
-	quantum_mechanics_data_url = "charmm.dat";
+	quantum_mechanics_data_url = "ref.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36;
@@ -61,21 +61,20 @@ int main()
 	// simulated annealing
 	//force_constants = global_minimum_finder.simulated_annealing(angles, quantum_mechanics_data_points, number_of_terms, 5000, 1.0, 3.0);
 	//force_constants = global_minimum_finder.threshold_accepting(angles, quantum_mechanics_data_points, number_of_terms, 5000, 50.0, 3.0);
-	force_constants = global_minimum_finder.simulated_annealing_with_threshold(angles, quantum_mechanics_data_points, number_of_terms, 5000, 1.0, 3.0, 0.1);
+	//force_constants = global_minimum_finder.simulated_annealing_with_threshold(angles, quantum_mechanics_data_points, number_of_terms, 5000, 1.0, 3.0, 0.1);
 		
 	// grading
-	summary();
+	//summary();
 
 	/*
 	double average = 0;
 	vector<double> run;
 	for (int i = 0; i < 10; i++)
 	{
-		//force_constants = global_minimum_finder.simulated_annealing(angles, quantum_mechanics_data_points, number_of_terms, 3000, 50.0, 20000.0);
-		force_constants = global_minimum_finder.threshold_accepting(angles, quantum_mechanics_data_points, number_of_terms, 3000, 50.0, 20000.0);
+		force_constants = global_minimum_finder.simulated_annealing_with_threshold(angles, quantum_mechanics_data_points, number_of_terms, 5000, 1.0, 3.0, 0.1);
 		double sum_of_squares_of_error = global_minimum_finder.rmse(force_constants, angles, quantum_mechanics_data_points);
-		average += sqrt(sum_of_squares_of_error/number_of_data_points);
-		run.push_back(sqrt(sum_of_squares_of_error/number_of_data_points));
+		average += sum_of_squares_of_error;
+		run.push_back(sum_of_squares_of_error);
 	}
 	double sd = 0;
 	for (int i = 0; i < 10; i++)

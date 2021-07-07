@@ -5,7 +5,6 @@ class GlobalMinimumFinder
 {
     private:
         vector<int> multiplicities;
-        unsigned int seed;
         mt19937 rng;
 
         double random_step(
@@ -27,7 +26,8 @@ class GlobalMinimumFinder
             multiplicities = {1, 2, 3, 4, 6};
             // random seed, can be fixed for rerun of experiments
             unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
-            mt19937 rng(seed);
+            mt19937 rng1(seed);
+            rng = rng1;
         }
 
         double force_field_calculate(
