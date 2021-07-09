@@ -1,8 +1,6 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#include "../nomad/interfaces/CInterface/NomadStdCInterface.h"
-
 struct Point
 {
     vector<double> x;
@@ -13,7 +11,7 @@ struct Point
     }
 };
 
-vector<Point> MLSL_MADS(
+vector<Point> MLSL(
     int n, 
     double l, 
     function<double(vector<double>&)> objective_function);

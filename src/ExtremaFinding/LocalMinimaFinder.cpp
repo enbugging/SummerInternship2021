@@ -1,10 +1,12 @@
 #define _USE_MATH_DEFINES
 #include <bits/stdc++.h>
 using namespace std;
-using namespace std::placeholders;
 
-#include "../nomad/interfaces/CInterface/NomadStdCInterface.h"
 #include "LocalMinimaFinder.h"
+#ifndef _NR_
+#define _NR_
+#include "../numerical_recipes/nr.h" // numerical recipes
+#endif
 
 #define random_step(rng,min,max) min + (double)rng() / UINT_MAX * (max - min) 
 
@@ -85,80 +87,14 @@ void clustering(
     }
 }
 
-bool objective_function_for_Nomad(
-    int nb_inputs, 
-    double *x, 
-    int nb_outputs, 
-    double *bb_outputs, 
-    bool *count_eval, 
-    NomadUserDataPtr data)
-{
-     bool eval_ok = true;
-
-    vector<double> x_copy(x, x + nb_inputs);
-    bb_outputs[0] = objective_function(x_copy);
-
-    *count_eval = true;
-    return eval_ok;
-}
-
-vector<double> MADS(
-    vector<double>& x
-)
-{
-    // indispensable parameters to create the problem
-    int 
-        nb_inputs = x.size(), 
-        nb_outputs = 1;
-    
-    // create Nomad problem
-    NomadProblem nomad_pb = createNomadProblem(objective_function_for_Nomad,
-                                               nb_inputs,
-                                               nb_outputs);
-    
-    double granularity_values[nb_inputs];
-    fill(granularity_values, granularity_values + nb_inputs, 0.0000001);
-    
-    // ix parameters using NOMAD convention
-
-    // fix important parameters
-    addNomadParam(nomad_pb, (char*)"BB_OUTPUT_TYPE PB PB OBJ EB");
-
-    // fix some external parameters
-    addNomadArrayOfDoubleParam(nomad_pb, (char*)"GRANULARITY",  granularity_values);
-
-    addNomadParam(nomad_pb, (char*)"DISPLAY_DEGREE 2");
-    addNomadParam(nomad_pb, (char*)"DISPLAY_STATS EVAL ( SOL ) OBJ CONS_H H_MAX");
-    addNomadParam(nomad_pb, (char*)"DISPLAY_ALL_EVAL true");
-    addNomadParam(nomad_pb, (char*)"DISPLAY_UNSUCCESSFUL false");
-
-    // for reproducibility
-    addNomadValParam(nomad_pb, (char*)"NB_THREADS_OPENMP", 1);
-
-    // and the number of blackbox allowed
-    addNomadParam(nomad_pb, (char*)"MAX_BB_EVAL 1000");
-
-    // run problem
-    double x0[nb_inputs]; // starting point
-    copy(x.begin(), x.end(), x0);
-    double x_feas_sol[nb_inputs]; // feasible solution
-    memset(x_feas_sol, 0, sizeof(x_feas_sol));
-    double x_inf_sol[nb_inputs]; // infeasible solution
-    memset(x_inf_sol, 0, sizeof(x_inf_sol));
-    double outputs_feas_sol[nb_outputs]; // feasible solution outputs
-    memset(outputs_feas_sol, 0, sizeof(outputs_feas_sol));
-    double outputs_inf_sol[nb_outputs]; // infeasible solution outputs
-    memset(outputs_inf_sol, 0, sizeof(outputs_inf_sol));
-
-    bool exists_feas, exists_infeas = false; // flag which indicates if the solution exists or not
-
-    solveNomadProblem(nomad_pb, 1, x0,
-                      &exists_feas, x_feas_sol, outputs_feas_sol,
-                      &exists_infeas, x_inf_sol, outputs_inf_sol,
-                      NULL);
-    
-    vector <double> ans(x_feas_sol, x_feas_sol + nb_inputs);
-    return ans;
+DP objective_function_wrapper(Vec_I_DP &x) {
+    vector<double> y;
+    y.resize(x.size());
+    for (int i = 0; i < (int) x.size(); i++)
+    {
+        y[i] = x[i];
+    }
+    return objective_function(y);
 }
 
 /*
@@ -169,7 +105,7 @@ Optim Eng 17, 105–125 (2016). https://doi.org/10.1007/s11081-015-9306-x
 Relevant variables' name all follow original paper. Here, we assume the function
 is well defined over the considered domain.
 */
-vector<Point> MLSL_MADS(
+vector<Point> MLSL(
     int n, 
     double l, 
     function<double(vector<double>&)> target_function)
@@ -296,7 +232,33 @@ vector<Point> MLSL_MADS(
         // a local minimizer x_star.
         
                 vector<Point> x_hat;
-                vector<double>x_star = MADS(C_twiddle[ind1].x);
+                vector<double>x_star = C_twiddle[ind1].x;
+                // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
+                // setup minimizer
+                DP FTOL = 1.0e-5;
+                const int IMAXSTEP = 10000;
+                int iter;
+                DP fret;
+                Vec_DP p(0.0, n); // variables
+                Mat_DP xi(n, n);
+                for (int i = 0; i < n; i++)
+                {
+                    p[i] = x_star[i];
+                }
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < n; j++)
+                    {
+                        xi[i][j] = (i == j ? x_star[i] : 0.0);
+                    }
+                }
+                
+                NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
+                for (int i = 0; i < n; i++)
+                {
+                    x_star[i] = p[i];
+                }
+
         // (b) If x_star not in X_star, then (x_hat <- x_star, add x_star to X_star, i <- 1)
         //      else (x_hat <- x_twiddle, add x_twiddle to X_hat.
                 bool in_X_star = false;
