@@ -3,13 +3,21 @@
 using namespace std;
 
 #include "GlobalMinimumFinder.h"
-
+#ifndef _NR_
+#define _NR_
+#include "../numerical_recipes/nr.h" // numerical recipes
+#endif
 #define random_step(rng,min,max) min + (double)rng() / UINT_MAX * (max - min)
 
 /*	-----------------------------------------------------------------------------------
  *	Utility functions, supporthing simulated-annealing-related functions
  * */
 vector<int> multiplicities = {0, 1, 2, 3, 4, 6};
+vector<double> 
+    dummy_angles,
+    dummy_quantum_mechanics_points, 
+    dummy_quantum_mechanics_weights;
+double dummy_threshold;
 
 double force_field_calculate(
     vector<double>& force_constants,
@@ -26,7 +34,7 @@ double force_field_calculate(
 double rmse(
     vector<double>& force_constants,
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_points, 
     vector<double>& quantum_mechanics_weights)
 {
     if (angles.empty()) return 0;
@@ -38,7 +46,7 @@ double rmse(
     double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int)angles.size(); i++)
     {
-        double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_data_points[i];
+        double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_points[i];
         sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
         sum_of_weights += quantum_mechanics_weights[i];
     }
@@ -70,7 +78,7 @@ double rmse_with_threshold(
     double threshold, 
     vector<double>& force_constants,
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_points, 
     vector<double>& quantum_mechanics_weights)
 {
     if (angles.empty()) return 0;
@@ -89,7 +97,7 @@ double rmse_with_threshold(
     double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int) angles.size(); i++)
     {
-        double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_data_points[i];
+        double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_points[i];
         sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
         sum_of_weights += quantum_mechanics_weights[i];
     }
@@ -101,13 +109,23 @@ double rmse_with_threshold(
     return sum_of_squares_of_error;
 }
 
+DP rmse_with_threshold_wrapper(Vec_I_DP &x) {
+    vector<double> y;
+    y.resize(x.size());
+    for (int i = 0; i < (int) x.size(); i++)
+    {
+        y[i] = x[i];
+    }
+    return rmse_with_threshold(dummy_threshold, y, dummy_angles, dummy_quantum_mechanics_points, dummy_quantum_mechanics_weights);
+}
+
 /*	-----------------------------------------------------------------------------------
  *	Simulated annealing and its variants. The implementations used Cauchy mutation scheme
  *  for best stability and power.
  * */
 vector<double> simulated_annealing(
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_points, 
     int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
@@ -146,7 +164,7 @@ vector<double> simulated_annealing(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -157,6 +175,39 @@ vector<double> simulated_annealing(
             force_constants = new_force_constants;
         }
     }
+
+    // further polishing
+    // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
+    // setup minimizer
+    /*
+    dummy_angles = angles;
+    dummy_quantum_mechanics_points = quantum_mechanics_points;
+    dummy_quantum_mechanics_weights = quantum_mechanics_weights;
+    dummy_threshold = threshold;
+    DP FTOL = 1.0e-5;
+    const int IMAXSTEP = 10000;
+    int iter;
+    DP fret;
+    Vec_DP p(0.0, number_of_terms); // variables
+    Mat_DP xi(number_of_terms, number_of_terms);
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        p[i] = force_constants[i];
+    }
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        for (int j = 0; j < number_of_terms; j++)
+        {
+            xi[i][j] = (i == j ? force_constants[i] : 0.0);
+        }
+    }
+    
+    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_threshold_wrapper);
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        force_constants[i] = p[i];
+    }
+    */
 
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
@@ -172,7 +223,7 @@ vector<double> simulated_annealing(
 
 vector<double> threshold_accepting(
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_points, 
     int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
@@ -211,7 +262,7 @@ vector<double> threshold_accepting(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -221,6 +272,39 @@ vector<double> threshold_accepting(
             force_constants = new_force_constants;
         }
     }
+
+    // further polishing
+    // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
+    // setup minimizer
+    /*
+    dummy_angles = angles;
+    dummy_quantum_mechanics_points = quantum_mechanics_points;
+    dummy_quantum_mechanics_weights = quantum_mechanics_weights;
+    dummy_threshold = threshold;
+    DP FTOL = 1.0e-5;
+    const int IMAXSTEP = 10000;
+    int iter;
+    DP fret;
+    Vec_DP p(0.0, number_of_terms); // variables
+    Mat_DP xi(number_of_terms, number_of_terms);
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        p[i] = force_constants[i];
+    }
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        for (int j = 0; j < number_of_terms; j++)
+        {
+            xi[i][j] = (i == j ? force_constants[i] : 0.0);
+        }
+    }
+    
+    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_threshold_wrapper);
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        force_constants[i] = p[i];
+    }
+    */
 
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
@@ -236,7 +320,7 @@ vector<double> threshold_accepting(
 
 vector<double> simulated_annealing_with_threshold(
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_points, 
     int number_of_terms,
     int number_of_steps, 
     double initial_temperature, 
@@ -288,7 +372,7 @@ vector<double> simulated_annealing_with_threshold(
             {
                 if((mask >> j) & 1) new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
             }
-            double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
+            double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
             // if the new set of parameters is better, then we accept
             // else, we accept, with a probability corresponding to the temperature
@@ -299,6 +383,39 @@ vector<double> simulated_annealing_with_threshold(
                 force_constants = new_force_constants;
             }
         }
+
+        // further polishing
+        // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
+        // setup minimizer
+        /*
+        dummy_angles = angles;
+        dummy_quantum_mechanics_points = quantum_mechanics_points;
+        dummy_quantum_mechanics_weights = quantum_mechanics_weights;
+        dummy_threshold = threshold;
+        DP FTOL = 1.0e-5;
+        const int IMAXSTEP = 10000;
+        int iter;
+        DP fret;
+        Vec_DP p(0.0, number_of_terms); // variables
+        Mat_DP xi(number_of_terms, number_of_terms);
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            p[i] = force_constants[i];
+        }
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            for (int j = 0; j < number_of_terms; j++)
+            {
+                xi[i][j] = (i == j ? force_constants[i] : 0.0);
+            }
+        }
+        
+        NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_threshold_wrapper);
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            force_constants[i] = p[i];
+        }
+        */
 
         //if (optimal_square_error > best_square_error)
         if (mask == (1<<number_of_terms) - 1)
@@ -318,7 +435,7 @@ vector<double> simulated_annealing_with_threshold(
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights) << '\n';
+        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
         force_constants.clear();
     }
     
