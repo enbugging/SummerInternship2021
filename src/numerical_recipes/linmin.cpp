@@ -7,7 +7,8 @@ Vec_DP *pcom_p, *xicom_p;
 void NR::linmin(Vec_IO_DP &p, Vec_IO_DP &xi, DP &fret, DP func(Vec_I_DP &)) {
     int j;
     const DP TOL = 1.0e-8;
-    DP xx, xmin, fx, fb, fa, bx, ax;
+    DP xx, xmin, bx, ax;
+    // DP fx, fb, fa; // uncommented if and only if line 26 is uncommented
 
     int n = p.size();
     ncom = n;

@@ -9,4 +9,4 @@ void nrexit(void) {
     return;
 }
 
-#pragma exit nrexit
+//#pragma exit nrexit
