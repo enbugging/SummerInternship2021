@@ -9,16 +9,16 @@ using namespace std;
 /*	-----------------------------------------------------------------------------------
  *	Utility functions, supporthing simulated-annealing-related functions
  * */
-vector<int> multiplicities = {1, 2, 3, 4, 6};
+vector<int> multiplicities = {0, 1, 2, 3, 4, 6};
 
 double force_field_calculate(
     vector<double>& force_constants,
     double angle)
 {
-    double E = 0;
-    for (int i = 0; i < (int)force_constants.size(); i++)
+    double E = force_constants[0];
+    for (int i = 1; i < (int)force_constants.size(); i++)
     {
-        E += force_constants[i] * (1 + cos(multiplicities[i] * angle / 180.0 * M_PI));
+        E += force_constants[i] * (cos(multiplicities[i] * angle / 180.0 * M_PI));
     }
     return E;
 }
@@ -26,16 +26,24 @@ double force_field_calculate(
 double rmse(
     vector<double>& force_constants,
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points)
+    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_weights)
 {
     if (angles.empty()) return 0;
-    double sum_of_squares_of_error = 0;
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+    double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int)angles.size(); i++)
     {
         double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_data_points[i];
-        sum_of_squares_of_error += error * error;
+        sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
+        sum_of_weights += quantum_mechanics_weights[i];
     }
-    sum_of_squares_of_error = sqrt(sum_of_squares_of_error/angles.size());
+
+    sum_of_squares_of_error = sqrt(sum_of_squares_of_error / sum_of_weights);
     return sum_of_squares_of_error;
 }
 
@@ -44,10 +52,10 @@ double coefficient(
     double threshold)
 {
     double
-        border_width = 0.001, 
+        border_width = 0.00001, 
         A, 
         B, 
-        extra_wall = 0, 
+        extra_wall = 0.001, 
         center = border_width + threshold;
     if (abs(t) >= center) A = 1;
     else if (abs(t) < threshold) A = 0;
@@ -62,25 +70,33 @@ double rmse_with_threshold(
     double threshold, 
     vector<double>& force_constants,
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points)
+    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_weights)
 {
     if (angles.empty()) return 0;
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+
     vector<double> new_force_constants = force_constants;
-    double c = 0.02;
+    double c = 0.01;
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
         new_force_constants[i] *= coefficient(force_constants[i], threshold);
     }
-    double sum_of_squares_of_error = 0;
+    double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int) angles.size(); i++)
     {
         double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_data_points[i];
-        sum_of_squares_of_error += error * error;
+        sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
+        sum_of_weights += quantum_mechanics_weights[i];
     }
-    sum_of_squares_of_error = sum_of_squares_of_error/angles.size();
+    sum_of_squares_of_error = sqrt(sum_of_squares_of_error/sum_of_weights);
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
-        sum_of_squares_of_error += c * coefficient(force_constants[i], threshold) *  coefficient(force_constants[i], threshold);
+        sum_of_squares_of_error += c * coefficient(force_constants[i], threshold);
     }
     return sum_of_squares_of_error;
 }
@@ -96,8 +112,15 @@ vector<double> simulated_annealing(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold)
+    double threshold, 
+    vector<double>& quantum_mechanics_weights)
 {
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+
     // random seed, can be fixed for rerun of experiments
     unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
@@ -123,7 +146,7 @@ vector<double> simulated_annealing(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -154,8 +177,15 @@ vector<double> threshold_accepting(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold)
+    double threshold, 
+    vector<double>& quantum_mechanics_weights)
 {
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+
     // random seed, can be fixed for rerun of experiments
     unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
@@ -181,7 +211,7 @@ vector<double> threshold_accepting(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
+        double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -211,8 +241,15 @@ vector<double> simulated_annealing_with_threshold(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold)
+    double threshold, 
+    vector<double>& quantum_mechanics_weights)
 {
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+
     // random seed, can be fixed for rerun of experiments
     unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
@@ -251,7 +288,7 @@ vector<double> simulated_annealing_with_threshold(
             {
                 if((mask >> j) & 1) new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
             }
-            double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points);
+            double new_square_error = rmse_with_threshold(threshold, new_force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights);
 
             // if the new set of parameters is better, then we accept
             // else, we accept, with a probability corresponding to the temperature
@@ -281,7 +318,7 @@ vector<double> simulated_annealing_with_threshold(
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_data_points) << '\n';
+        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_data_points, quantum_mechanics_weights) << '\n';
         force_constants.clear();
     }
     

@@ -6,10 +6,13 @@ double force_field_calculate(
     double angle
 );
 
+static vector<double> dummy;
+
 double rmse(
     vector<double>& force_constants,
     vector<double>& angles,
-    vector<double>& quantum_mechanics_data_points);
+    vector<double>& quantum_mechanics_data_points, 
+    vector<double>& quantum_mechanics_weights = dummy);
 
 vector<double> simulated_annealing(
     vector<double>& angles,
@@ -18,8 +21,8 @@ vector<double> simulated_annealing(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold = 0
-);
+    double threshold = 0, 
+    vector<double>& quantum_mechanics_weights = dummy);
 
 vector<double> threshold_accepting(
     vector<double>& angles,
@@ -28,8 +31,8 @@ vector<double> threshold_accepting(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold = 0
-    );
+    double threshold = 0, 
+    vector<double>& quantum_mechanics_weights = dummy);
 
 vector<double> simulated_annealing_with_threshold(
     vector<double>& angles,
@@ -38,4 +41,5 @@ vector<double> simulated_annealing_with_threshold(
     int number_of_steps, 
     double initial_temperature, 
     double initial_radius, 
-    double threshold = 0);
+    double threshold = 0, 
+    vector<double>& quantum_mechanics_weights = dummy);
