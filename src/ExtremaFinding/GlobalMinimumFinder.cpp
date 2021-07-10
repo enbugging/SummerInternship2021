@@ -397,7 +397,9 @@ vector<double> simulated_annealing_with_threshold(
         int iter;
         DP fret;
         Vec_DP p(0.0, number_of_terms); // variables
+        cerr << "RUNNING " << number_of_terms << '\n';
         Mat_DP xi(number_of_terms, number_of_terms);
+        cerr << "RUNNING " << number_of_terms << '\n';
         for (int i = 0; i < number_of_terms; i++)
         {
             p[i] = force_constants[i];

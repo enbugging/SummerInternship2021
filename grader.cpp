@@ -72,10 +72,10 @@ int main()
 	// simulated annealing
 	//force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0);
 	//force_constants = threshold_accepting(angles, quantum_mechanics_points, number_of_terms, 5000, 50.0, 3.0);
-	//force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.03);
+	force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.03);
 		
 	// grading
-	//summary();
+	summary();
 
 	/*
 	double average = 0;
@@ -96,18 +96,23 @@ int main()
 	*/
 
 	// LOCAL MINIMA FINDING
+	
+	/*
 	result = MLSL(number_of_terms, 3.0, wrapper_function_for_finding_local_minima);\
 	cerr << result.size() << '\n';
+	
 	for (int i = 0; i < (int) result.size(); i++)
 	{
 		cerr << "Minima " << i << " - RMSE: " << result[i].value << '\n';
-		/*
+		
 		cerr << "Force constants: ";
 		for (int j = 0; j < number_of_terms; j++)
 		{
 			cerr << result[i].x[j] << " ";
 		}
 		cerr << '\n';
-		*/
+		*/	
 	}
+	
+	
 }

@@ -75,11 +75,12 @@ void clustering(
             {
                 for (int ind2 = 0; ind2 < (int) clustered.size(); ind2++)
                 {
-                    if (clustered[ind2].value < C_twiddle[ind1].value && norm(C_twiddle[ind1], clustered[ind2]) <= r)
+                    if (clustered[ind2].value - 1e-5 < C_twiddle[ind1].value && norm(C_twiddle[ind1], clustered[ind2]) <= r)
                     {
                         clustered.push_back(C_twiddle[ind1]);
                         C_twiddle[ind1].clustered = true;
                         clusterable = true;
+                        break;
                     }
                 }
             }
@@ -117,6 +118,15 @@ vector<Point> MLSL(
     unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
 
+    // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
+    // setup minimizer
+    DP FTOL = 1.0e-5;
+    const int IMAXSTEP = 10000;
+    int iter;
+    DP fret;
+    Vec_DP p(0.0, n); // variables
+    Mat_DP xi(n, n);
+
     // C0: INITIALIZE
     // 1. Choose termination conditions for MLSL and MADS
     // 2. Choose N_twiddle > 0, N_hat > 0, 0 < gamma < 1, alpha > 0
@@ -135,10 +145,8 @@ vector<Point> MLSL(
     int N = 0, k = 0;
     x.resize(n);
 
-    int ind_debug = 0;
     while (true)
     {
-    cerr << "RUNNING " << ++ind_debug << '\n';
     // C1: GLOBAL PHASE
 
     // C1-0: Setting
@@ -189,8 +197,8 @@ vector<Point> MLSL(
         // (a) Remove all points whose objective function values are infinity from C_bar.
         // (b) If C_bar = empty, go to C3.
         // (c) Choose all distinct points in C_bar and place them in C_twiddle.
-        C_twiddle.resize(C_twiddle.size() + C_bar.size());
         int ind2 = (int) C_twiddle.size();
+        C_twiddle.resize(C_twiddle.size() + C_bar.size());
         for (set<Point>::iterator ind1 = C_bar.begin(); ind1 != C_bar.end(); ind1++)
         {
             C_twiddle[ind2++] = (*ind1);
@@ -237,20 +245,12 @@ vector<Point> MLSL(
         // (a) Apply MADS algorithm with empty SEARCH step using x_twiddle as a start point to find 
         // a local minimizer x_star.
                 vector<Point> x_hat;
-                vector<double>x_star = C_twiddle[ind1].x;
-                // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
-                // setup minimizer
-                DP FTOL = 1.0e-5;
-                const int IMAXSTEP = 10000;
-                int iter;
-                DP fret;
-                Vec_DP p(0.0, n); // variables
-                cerr << "RUNNING\n";
-                Mat_DP xi(n, n); // something is wrong with this line
-                cerr << "RUNNING\n";
+                Point x_star = {C_twiddle[ind1].x, 0.0, false};
+                
+                // Local minimization using Powell's algorithm
                 for (int ind2 = 0; ind2 < n; ind2++)
                 {
-                    p[ind2] = x_star[ind2];
+                    p[ind2] = x_star.x[ind2];
                 }
                 for (int ind2 = 0; ind2 < n; ind2++)
                 {
@@ -263,14 +263,16 @@ vector<Point> MLSL(
                 NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
                 for (int ind2 = 0; ind2 < n; ind2++)
                 {
-                    x_star[ind2] = p[ind2];
+                    x_star.x[ind2] = p[ind2];
                 }
+                x_star.value = objective_function(x_star.x);
+                x_star.clustered = true;
         // (b) If x_star not in X_star, then (x_hat <- x_star, add x_star to X_star, i <- 1)
         //      else (x_hat <- x_twiddle, add x_twiddle to X_hat.
                 bool in_X_star = false;
                 for (int ind2 = 0; ind2 < (int) X_star.size(); ind2++)
                 {
-                    if (X_star[ind2].x == x_star)
+                    if (norm(X_star[ind2], x_star) <= 1.0e-4)
                     {
                         in_X_star = true;
                         break;
@@ -278,8 +280,8 @@ vector<Point> MLSL(
                 }
                 if (not in_X_star)
                 {
-                    X_star.push_back({x_star, objective_function(x_star), true});
-                    X_star.push_back({x_star, objective_function(x_star), true});
+                    X_star.push_back(x_star);
+                    x_hat.push_back(x_star);
                     i = 1;
                 }
                 else
