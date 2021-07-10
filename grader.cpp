@@ -63,6 +63,18 @@ double wrapper_function_for_finding_local_minima(
 	return rmse(force_constants, angles, quantum_mechanics_points);
 }
 
+double camel_function(
+	vector<double> x)
+{
+	return 4.0 * pow(x[0], 2) - 2.1 * pow(x[0], 4) + 1.0/3.0 * pow(x[0], 6) + x[0] * x[1] - 4.0 * pow(x[1], 2) + 4.0 * pow(x[1], 4);
+}
+
+double rastrigin_function(
+	vector<double> x)
+{
+	return pow(x[0], 2) + pow(x[1], 2) - cos(18.0 * x[0]) - cos(18.0 * x[1]);
+}
+
 int main()
 {
 	// preprocessing
@@ -72,10 +84,10 @@ int main()
 	// simulated annealing
 	//force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0);
 	//force_constants = threshold_accepting(angles, quantum_mechanics_points, number_of_terms, 5000, 50.0, 3.0);
-	force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.03);
+	//force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.03);
 		
 	// grading
-	summary();
+	//summary();
 
 	/*
 	double average = 0;
@@ -96,9 +108,10 @@ int main()
 	*/
 
 	// LOCAL MINIMA FINDING
-	
-	/*
-	result = MLSL(number_of_terms, 3.0, wrapper_function_for_finding_local_minima);\
+	//result = MLSL(number_of_terms, 10.0, wrapper_function_for_finding_local_minima);
+	number_of_terms = 2;
+	//result = MLSL(number_of_terms, 50.0, camel_function);
+	result = MLSL(number_of_terms, 1.5, rastrigin_function);
 	cerr << result.size() << '\n';
 	
 	for (int i = 0; i < (int) result.size(); i++)
@@ -111,8 +124,5 @@ int main()
 			cerr << result[i].x[j] << " ";
 		}
 		cerr << '\n';
-		*/	
 	}
-	
-	
 }

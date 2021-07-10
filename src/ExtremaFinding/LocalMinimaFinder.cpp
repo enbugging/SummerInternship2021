@@ -205,7 +205,7 @@ vector<Point> MLSL(
         }
         // (d) N_k <- N_(k-1) + j * N_hat; compute r_k
         N = N + j * N_hat;
-        double r = 1/sqrt(M_PI) * pow(tgamma(1.0 + n/2.0) * power(l, n) * (1 - pow(alpha, 1.0/(N - 1))), 1.0/n);
+        double r = 1.0/sqrt(M_PI) * pow(tgamma(1.0 + n/2.0) * power(2.0 * l, n) * (1 - pow(alpha, 1.0/(N - 1))), 1.0/n);
         // (e) If X_star != empty, apply the single linkage clustering procedure to points in
         // C_twiddle that have not been assigned to clusters with seed points from X_star U X_hat.
         if (not X_star.empty())
@@ -287,6 +287,7 @@ vector<Point> MLSL(
                 else
                 {
                     X_hat.push_back(C_twiddle[ind1]);
+                    C_twiddle[ind1].clustered = true;
                     x_hat.push_back(C_twiddle[ind1]);
                 }
 
