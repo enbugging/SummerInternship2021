@@ -387,7 +387,7 @@ vector<double> simulated_annealing_with_threshold(
         // further polishing
         // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
         // setup minimizer
-        /*
+        ///*
         dummy_angles = angles;
         dummy_quantum_mechanics_points = quantum_mechanics_points;
         dummy_quantum_mechanics_weights = quantum_mechanics_weights;
@@ -415,7 +415,7 @@ vector<double> simulated_annealing_with_threshold(
         {
             force_constants[i] = p[i];
         }
-        */
+        //*/
 
         //if (optimal_square_error > best_square_error)
         if (mask == (1<<number_of_terms) - 1)

@@ -112,7 +112,7 @@ vector<Point> MLSL(
 {
     vector<Point> X_star;
     objective_function = target_function;
-
+    
     // random seed, can be fixed for rerun of experiments
     unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
@@ -121,24 +121,24 @@ vector<Point> MLSL(
     // 1. Choose termination conditions for MLSL and MADS
     // 2. Choose N_twiddle > 0, N_hat > 0, 0 < gamma < 1, alpha > 0
     bool i;
-    int N_hat = 20;
+    int 
+        N_twiddle = 10, 
+        N_hat = 20;
     double 
         gamma = 0.5,
-        alpha = 1.0;
+        alpha = 0.5;
     // 3. C <- empty, X_star <- empty, X_hat <- empty, N_0 <- 0, k <- 0
     vector<vector<double> > C;
     vector<Point> X_hat;
-    vector<pair<double, int> > values_in_C_bar;
+    vector<double> x;
+    vector<pair<double, int> > values_in_C;
     int N = 0, k = 0;
-    C.resize(n);
-    values_in_C_bar.resize(n);
-    for (int ind = 0; ind < N; ind++)
-    {
-        C[ind].resize(n);
-    }
+    x.resize(n);
 
+    int ind_debug = 0;
     while (true)
     {
+    cerr << "RUNNING " << ++ind_debug << '\n';
     // C1: GLOBAL PHASE
 
     // C1-0: Setting
@@ -149,41 +149,48 @@ vector<Point> MLSL(
         // (b) Go to C1-1.
 
     // C1-1: Sampling
-        // (a) C_bar <- empty, j <- j + 1
         set<Point> C_bar;
-        j++;
+        while (j < N_twiddle)
+        {
+        // (a) C_bar <- empty, j <- j + 1
+            C_bar.clear();
+            j++;
         // (b) Draw N_hat points with uniform distribution on Theta, 
         // evluate objective funciton vaues at samples, and add sample points 
         // to C.
-        for (int ind1 = 0; ind1 < N_hat; ind1++)
-        {
-            for(int ind2 = 0; ind2 < n; ind2++)
+            for (int ind1 = 0; ind1 < N_hat; ind1++)
             {
-                C[ind1][ind2] = random_step(rng, -l, l);
+                for(int ind2 = 0; ind2 < n; ind2++)
+                {
+                    x[ind2] = random_step(rng, -l, l);
+                }
+                C.push_back(x);
+                values_in_C.push_back({objective_function(x), C.size() - 1});
             }
-            values_in_C_bar[ind1] = {objective_function(C[ind1]), ind1};
-        }
+    
         // (c) Choose [gamma * k * N_hat] points in C with lowest objective 
         // function values and place them in C_bar.
-        int gamma_k_N_hat = gamma * k * N_hat;
-        sort(values_in_C_bar.begin(), values_in_C_bar.end());
-        for (int ind = 0; ind < gamma_k_N_hat; ind++)
-        {
-            C_bar.insert({
-                C[values_in_C_bar[ind].second], 
-                values_in_C_bar[ind].first, 
-                false
-            });
-        }
+            sort(values_in_C.begin(), values_in_C.end());
+            int gamma_k_N_hat = gamma * k * N_hat;
+            for (int ind = 0; ind < gamma_k_N_hat; ind++)
+            {
+                C_bar.insert({
+                    C[values_in_C[ind].second], 
+                    values_in_C[ind].first, 
+                    false
+                });
+            }
+
         // (d) If all points in C_bar have finite objective function values, then go C1-2
         // (e) If j < N_twiddle, then go to C1-1, else go to C1-2.
-
+        }
+    
     // C1-2: Processing
         // (a) Remove all points whose objective function values are infinity from C_bar.
         // (b) If C_bar = empty, go to C3.
         // (c) Choose all distinct points in C_bar and place them in C_twiddle.
-        C_twiddle.resize(C_bar.size());
-        int ind2 = 0;
+        C_twiddle.resize(C_twiddle.size() + C_bar.size());
+        int ind2 = (int) C_twiddle.size();
         for (set<Point>::iterator ind1 = C_bar.begin(); ind1 != C_bar.end(); ind1++)
         {
             C_twiddle[ind2++] = (*ind1);
@@ -191,7 +198,6 @@ vector<Point> MLSL(
         // (d) N_k <- N_(k-1) + j * N_hat; compute r_k
         N = N + j * N_hat;
         double r = 1/sqrt(M_PI) * pow(tgamma(1.0 + n/2.0) * power(l, n) * (1 - pow(alpha, 1.0/(N - 1))), 1.0/n);
-
         // (e) If X_star != empty, apply the single linkage clustering procedure to points in
         // C_twiddle that have not been assigned to clusters with seed points from X_star U X_hat.
         if (not X_star.empty())
@@ -209,7 +215,7 @@ vector<Point> MLSL(
             }
             clustering(C_twiddle, clustered, r);
         }
-
+    
         // (f) If every point in C_twiddle has been assigned to a cluster, then go to C3, else
         if (C_twiddle.empty())
         {
@@ -220,7 +226,7 @@ vector<Point> MLSL(
         {
             i = 0;
         }
-
+    
     // C2: LOCAL PHASE
         for (int ind1 = 0; ind1 < (int) C_twiddle.size(); ind1++)
         {
@@ -230,7 +236,6 @@ vector<Point> MLSL(
             {
         // (a) Apply MADS algorithm with empty SEARCH step using x_twiddle as a start point to find 
         // a local minimizer x_star.
-        
                 vector<Point> x_hat;
                 vector<double>x_star = C_twiddle[ind1].x;
                 // Powell's algorithm, using Numerical Recipes, provided by Prof. Alexandrov
@@ -240,25 +245,26 @@ vector<Point> MLSL(
                 int iter;
                 DP fret;
                 Vec_DP p(0.0, n); // variables
-                Mat_DP xi(n, n);
-                for (int i = 0; i < n; i++)
+                cerr << "RUNNING\n";
+                Mat_DP xi(n, n); // something is wrong with this line
+                cerr << "RUNNING\n";
+                for (int ind2 = 0; ind2 < n; ind2++)
                 {
-                    p[i] = x_star[i];
+                    p[ind2] = x_star[ind2];
                 }
-                for (int i = 0; i < n; i++)
+                for (int ind2 = 0; ind2 < n; ind2++)
                 {
-                    for (int j = 0; j < n; j++)
+                    for (int ind3 = 0; ind3 < n; ind3++)
                     {
-                        xi[i][j] = (i == j ? x_star[i] : 0.0);
+                        xi[ind2][ind3] = (ind2 == ind3 ? p[ind2] : 0.0);
                     }
                 }
                 
                 NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
-                for (int i = 0; i < n; i++)
+                for (int ind2 = 0; ind2 < n; ind2++)
                 {
-                    x_star[i] = p[i];
+                    x_star[ind2] = p[ind2];
                 }
-
         // (b) If x_star not in X_star, then (x_hat <- x_star, add x_star to X_star, i <- 1)
         //      else (x_hat <- x_twiddle, add x_twiddle to X_hat.
                 bool in_X_star = false;
@@ -272,8 +278,8 @@ vector<Point> MLSL(
                 }
                 if (not in_X_star)
                 {
-                    X_hat.push_back({x_star, objective_function(x_star), true});
-                    x_hat.push_back({x_star, objective_function(x_star), true});
+                    X_star.push_back({x_star, objective_function(x_star), true});
+                    X_star.push_back({x_star, objective_function(x_star), true});
                     i = 1;
                 }
                 else
