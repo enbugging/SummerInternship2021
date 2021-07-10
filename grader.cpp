@@ -60,7 +60,7 @@ void summary()
 double wrapper_function_for_finding_local_minima(
 	vector<double> force_constants)
 {
-	return rmse(force_constants, angles, quantum_mechanics_points);
+	return rmse_with_threshold(0.05, force_constants, angles, quantum_mechanics_points);
 }
 
 double camel_function(
@@ -108,10 +108,10 @@ int main()
 	*/
 
 	// LOCAL MINIMA FINDING
-	//result = MLSL(number_of_terms, 10.0, wrapper_function_for_finding_local_minima);
-	number_of_terms = 2;
+	result = MLSL(number_of_terms, 6.0, wrapper_function_for_finding_local_minima);
+	//number_of_terms = 2;
 	//result = MLSL(number_of_terms, 50.0, camel_function);
-	result = MLSL(number_of_terms, 1.5, rastrigin_function);
+	//result = MLSL(number_of_terms, 1.5, rastrigin_function);
 	cerr << result.size() << '\n';
 	
 	for (int i = 0; i < (int) result.size(); i++)

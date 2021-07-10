@@ -14,6 +14,13 @@ double rmse(
     vector<double>& quantum_mechanics_points, 
     vector<double>& quantum_mechanics_weights = dummy);
 
+double rmse_with_threshold(
+    double threshold, 
+    vector<double>& force_constants,
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_points, 
+    vector<double>& quantum_mechanics_weights = dummy);
+
 vector<double> simulated_annealing(
     vector<double>& angles,
     vector<double>& quantum_mechanics_points, 
