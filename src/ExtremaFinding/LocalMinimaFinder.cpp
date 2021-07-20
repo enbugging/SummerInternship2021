@@ -66,6 +66,11 @@ void clustering(
     double r)
 {
     bool clusterable = true;
+    for (int ind1 = 0; ind1 < (int) C_twiddle.size(); ind1++)
+    {
+        C_twiddle[ind1].clustered = false;
+    }
+    
     while (clusterable)
     {
         clusterable = false;
@@ -75,7 +80,7 @@ void clustering(
             {
                 for (int ind2 = 0; ind2 < (int) clustered.size(); ind2++)
                 {
-                    if (clustered[ind2].value - 1e-5 < C_twiddle[ind1].value && norm(C_twiddle[ind1], clustered[ind2]) <= r)
+                    if (clustered[ind2].value < C_twiddle[ind1].value && norm(C_twiddle[ind1], clustered[ind2]) <= r)
                     {
                         clustered.push_back(C_twiddle[ind1]);
                         C_twiddle[ind1].clustered = true;
@@ -133,10 +138,10 @@ vector<Point> MLSL(
     bool i;
     int 
         N_twiddle = 10, 
-        N_hat = 20;
+        N_hat = 100;
     double 
         gamma = 0.5,
-        alpha = 0.5;
+        alpha = 0.9;
     // 3. C <- empty, X_star <- empty, X_hat <- empty, N_0 <- 0, k <- 0
     vector<vector<double> > C;
     vector<Point> X_hat;
@@ -272,7 +277,7 @@ vector<Point> MLSL(
                 bool in_X_star = false;
                 for (int ind2 = 0; ind2 < (int) X_star.size(); ind2++)
                 {
-                    if (norm(X_star[ind2], x_star) <= 1.0e-4)
+                    if (norm(X_star[ind2], x_star) <= 5.0e-5)
                     {
                         in_X_star = true;
                         break;
@@ -302,7 +307,7 @@ vector<Point> MLSL(
             break;
         }
     // 5. If any MLSLS termination criterion is satisfied, then go to C3. Else, go to C1.
-        if (k > 100 || X_star.size() > 100 || X_hat.size() > 100)
+        if (X_star.size() > 100)// || k > 100 || X_hat.size() > 100)
         {
             break;
         }
@@ -311,5 +316,6 @@ vector<Point> MLSL(
     // C3: FINALIZE
     // 1. If X_star != empty, order points in X_star according to their objective function values.
     // 2. Stop MLSL-MADS
+    sort(X_star.begin(), X_star.end());
     return X_star;
 }

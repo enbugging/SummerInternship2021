@@ -10,7 +10,7 @@ string
 	quantum_mechanics_url_points = "ref.dat", 
 	quantum_mechanics_url_weights = "weight.dat";
 int
-	number_of_terms = 4,
+	number_of_terms = 6,
 	number_of_data_points = 36;
 vector<double>
 	angles,
@@ -60,7 +60,7 @@ void summary()
 double wrapper_function_for_finding_local_minima(
 	vector<double> force_constants)
 {
-	return rmse_with_threshold(0.05, force_constants, angles, quantum_mechanics_points);
+	return rmse_with_cutoff(0.1, force_constants, angles, quantum_mechanics_points);
 }
 
 double camel_function(
@@ -84,17 +84,17 @@ int main()
 	// simulated annealing
 	//force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0);
 	//force_constants = threshold_accepting(angles, quantum_mechanics_points, number_of_terms, 5000, 50.0, 3.0);
-	//force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.03);
+	force_constants = simulated_annealing_with_cutoff(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.1, quantum_mechanics_weights);
 		
 	// grading
-	//summary();
+	summary();
 
 	/*
 	double average = 0;
 	vector<double> run;
 	for (int i = 0; i < 10; i++)
 	{
-		force_constants = simulated_annealing_with_threshold(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0, 0.0);
+		force_constants = simulated_annealing_with_cutoff(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0, 0.0);
 		double sum_of_squares_of_error = rmse(force_constants, angles, quantum_mechanics_points);
 		average += sum_of_squares_of_error;
 		run.push_back(sum_of_squares_of_error);
@@ -108,10 +108,11 @@ int main()
 	*/
 
 	// LOCAL MINIMA FINDING
+	/*
 	result = MLSL(number_of_terms, 6.0, wrapper_function_for_finding_local_minima);
 	//number_of_terms = 2;
 	//result = MLSL(number_of_terms, 50.0, camel_function);
-	//result = MLSL(number_of_terms, 1.5, rastrigin_function);
+	//result = MLSL(number_of_terms, 1.0, rastrigin_function);
 	cerr << result.size() << '\n';
 	
 	for (int i = 0; i < (int) result.size(); i++)
@@ -125,4 +126,5 @@ int main()
 		}
 		cerr << '\n';
 	}
+	*/
 }
