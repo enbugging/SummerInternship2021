@@ -35,6 +35,11 @@ double force_field_calculate(
     return E;
 }
 
+double cubical(double x)
+{
+    return -2 * x * x * x + 3 * x * x;
+}
+
 double coefficient(
     double t, 
     double cutoff)
@@ -46,8 +51,9 @@ double coefficient(
         center = cutoff - border_width;
     if (abs(t) >= cutoff) A = 1;
     else if (abs(t) <= center) A = 0;
-    else A = (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
-
+    //else A = (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
+    //else A = cubical((abs(t) - cutoff)/border_width + 1);
+    else A = (abs(t) - cutoff)/border_width + 1;
     return A;
 }
 

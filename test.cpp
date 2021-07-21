@@ -15,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 10,
+    number_of_tests = 100,
     result = 0;
 vector<double>
 	angles,
@@ -154,7 +154,7 @@ int summary2()
 
 int main()
 {
-	for (int test = 0; test < number_of_tests; test++)
+	for (int test = 0; test < 0/*number_of_tests*/; test++)
     {
         // preprocessing
         preprocess1();
@@ -170,7 +170,7 @@ int main()
     printf("Test 1 - Cutoff. Correct: %d/%d\n", result, number_of_tests);
 
     result = 0;
-    for (int test = 0; test < 0/*number_of_tests*/; test++)
+    for (int test = 0; test < number_of_tests; test++)
     {
         // preprocessing
         preprocess2();
