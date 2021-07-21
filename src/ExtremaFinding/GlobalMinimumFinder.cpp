@@ -53,7 +53,8 @@ double coefficient(
     else if (abs(t) <= center) A = 0;
     //else A = (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
     //else A = cubical((abs(t) - cutoff)/border_width + 1);
-    else A = (abs(t) - cutoff)/border_width + 1;
+    //else A = (abs(t) - cutoff)/border_width + 1;
+    else A = 0.9999;
     return A;
 }
 

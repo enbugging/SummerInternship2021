@@ -154,15 +154,15 @@ int summary2()
 
 int main()
 {
-	for (int test = 0; test < 0/*number_of_tests*/; test++)
+	for (int test = 0; test < number_of_tests; test++)
     {
         // preprocessing
         preprocess1();
 
         // GLOBAL MINIMUM FINDING
         // simulated annealing
-        force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
-        //force_constants = threshold_accepting(angles, test_points, number_of_terms, 5000, 50.0, 3.0);
+        //force_constants = simulated_annealing(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
+        force_constants = threshold_accepting(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
 
         // grading
         result += summary1();
@@ -170,7 +170,7 @@ int main()
     printf("Test 1 - Cutoff. Correct: %d/%d\n", result, number_of_tests);
 
     result = 0;
-    for (int test = 0; test < number_of_tests; test++)
+    for (int test = 0; test < 0/*number_of_tests*/; test++)
     {
         // preprocessing
         preprocess2();
@@ -178,7 +178,7 @@ int main()
         // GLOBAL MINIMUM FINDING
         // simulated annealing
         //force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
-        force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
+        force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
         //force_constants = threshold_accepting(angles, test_points, number_of_terms, 5000, 50.0, 3.0);
             
         // grading
