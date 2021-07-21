@@ -7,6 +7,7 @@ using namespace std;
 #include "src/ExtremaFinding/LocalMinimaFinder.h"
 
 #define random_step(rng,min,max) min + (double)rng() / UINT_MAX * (max - min)
+normal_distribution<double> gaussian (0.0,1.0);
 
 double 
     cutoff,
@@ -14,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 1000,
+    number_of_tests = 10,
     result = 0;
 vector<double>
 	angles,
@@ -57,7 +58,7 @@ void preprocess1()
     test_points.resize(angles.size());
     for (int i = 0; i < (int) angles.size(); i++)
     {
-        test_points[i] = force_field_calculate(test_force_constants, angles[i]);
+        test_points[i] = force_field_calculate(test_force_constants, angles[i]) + 2.0e-6 * gaussian(rng);
     }
 }
 
