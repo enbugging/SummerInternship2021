@@ -58,7 +58,7 @@ void preprocess1()
     test_points.resize(angles.size());
     for (int i = 0; i < (int) angles.size(); i++)
     {
-        test_points[i] = force_field_calculate(test_force_constants, angles[i]) + 2.0e-6 * gaussian(rng);
+        test_points[i] = force_field_calculate(test_force_constants, angles[i]);// + 2.0e-6 * gaussian(rng);
     }
 }
 
