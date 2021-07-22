@@ -15,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 1,
+    number_of_tests = 1000,
     result = 0;
 vector<double>
 	angles,
@@ -150,6 +150,14 @@ int summary2()
 	{
         match &= (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6);
 	}
+    if (not match)
+    {
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            cerr << "WRONG " << i << " : " << test_force_constants[i] << ' ' << force_constants[i] << '\n';
+        }
+        cerr << '\n';
+    }
     return match;
 }
 

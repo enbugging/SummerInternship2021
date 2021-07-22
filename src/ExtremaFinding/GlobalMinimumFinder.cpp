@@ -48,7 +48,7 @@ double coefficient(
     The tiny margin is meant to fix the numerical instability around the cutoff
     */
     double
-        border_width = min(0.00001, cutoff/3.0), 
+        border_width = min(1.0e-5, cutoff/3.0), 
         A, 
         //extra_wall = 0.0000, 
         center = cutoff - border_width;
