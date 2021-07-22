@@ -15,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 100,
+    number_of_tests = 1,
     result = 0;
 vector<double>
 	angles,
@@ -27,7 +27,7 @@ vector<double>
 void preprocess1()
 {
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count(); // 17 for testing
     mt19937 rng(seed);
 
     cutoff = 0.1;
@@ -82,7 +82,8 @@ int summary1()
     bool match = true;
     for (int i = 0; i < number_of_terms; i++)
 	{
-        match &= (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6);
+        //cerr << "FINAL " << i << " : " << test_force_constants[i] << ' ' << force_constants[i] << '\n';
+        match &= (abs(force_constants[i] - (abs(test_force_constants[i]) > cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6);
 	}
     return match;
 }
@@ -161,8 +162,8 @@ int main()
 
         // GLOBAL MINIMUM FINDING
         // simulated annealing
-        //force_constants = simulated_annealing(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
-        force_constants = threshold_accepting(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
+        force_constants = simulated_annealing(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
+        //force_constants = threshold_accepting(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
 
         // grading
         result += summary1();

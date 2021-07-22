@@ -44,6 +44,9 @@ double coefficient(
     double t, 
     double cutoff)
 {
+    /* 
+    The tiny margin is meant to fix the numerical instability around the cutoff
+    */
     double
         border_width = min(0.00001, cutoff/3.0), 
         A, 
@@ -166,7 +169,7 @@ vector<double> simulated_annealing(
     }
 
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count(); // 17 for testing
     mt19937 rng(seed);
 
     // initialization
@@ -200,6 +203,13 @@ vector<double> simulated_annealing(
             best_square_error = new_square_error,
             force_constants = new_force_constants;
         }
+        /*
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            cerr << force_constants[i] << ' ';
+        }
+        cerr << " - Error: " << best_square_error << '\n';
+        */
     }
 
     // further polishing
@@ -236,15 +246,30 @@ vector<double> simulated_annealing(
     }
     //*/
     
+    /*
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        cerr << force_constants[i] << ' ';
+    }
+    cerr << " - Error: " << best_square_error << '\n';
+    */
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
     {
-        if (abs(force_constants[i]) < cutoff)
+        //cerr << abs(force_constants[i]) - cutoff << '\n';
+        if (abs(force_constants[i]) <= cutoff)
         {
             force_constants[i] = 0;
         }
     }
 
+    /*
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        cerr << force_constants[i] << ' ';
+    }
+    cerr << " - Error: " << best_square_error << '\n';
+    */
     return force_constants;
 }
 
