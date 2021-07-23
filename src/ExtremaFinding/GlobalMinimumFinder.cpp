@@ -12,6 +12,7 @@ using namespace std;
 /*	-----------------------------------------------------------------------------------
  *	Utility functions, supporthing simulated-annealing-related functions
  * */
+const double scale_factor = 1e4, height_difference = 1/scale_factor;
 vector<double> 
     dummy_angles,
     dummy_quantum_mechanics_points, 
@@ -44,21 +45,8 @@ double coefficient(
     double t, 
     double cutoff)
 {
-    /* 
-    The tiny margin is meant to fix the numerical instability around the cutoff
-    */
-    double
-        border_width = min(1.0e-5, cutoff/3.0), 
-        A, 
-        //extra_wall = 0.0000, 
-        center = cutoff - border_width;
-    if (abs(t) >= cutoff) A = 1;
-    else if (abs(t) <= center) A = 0;
-    //else A = (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
-    //else A = cubical((abs(t) - cutoff)/border_width + 1);
-    //else A = (abs(t) - cutoff)/border_width + 1;
-    else A = 0.9999;
-    return A;
+    if (abs(t) >= cutoff) return 1;
+    else return 1 - height_difference;
 }
 
 double rmse_with_cutoff(
@@ -119,7 +107,7 @@ double rmse_with_cutoff_and_simplicity_accuracy_trading(
     sum_of_squares_of_error = sqrt(sum_of_squares_of_error/sum_of_weights);
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
-        sum_of_squares_of_error += simplicity_accuracy_trading[i] * coefficient(force_constants[i], cutoff);
+        sum_of_squares_of_error += simplicity_accuracy_trading[i] * scale_factor * coefficient(force_constants[i], cutoff);
     }
     return sum_of_squares_of_error;
 }
@@ -221,8 +209,8 @@ vector<double> simulated_annealing(
     dummy_quantum_mechanics_points = quantum_mechanics_points;
     dummy_quantum_mechanics_weights = quantum_mechanics_weights;
     dummy_cutoff = cutoff;
-    DP FTOL = 1.0e-5;
-    const int IMAXSTEP = 10000;
+    DP FTOL = 1.0e-6;
+    const int IMAXSTEP = 100000;
     int iter;
     DP fret;
     Vec_DP p(0.0, number_of_terms); // variables

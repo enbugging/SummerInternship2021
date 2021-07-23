@@ -15,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 1000,
+    number_of_tests = 100,
     result = 0;
 vector<double>
 	angles,
@@ -158,19 +158,27 @@ int summary2()
 	{
         match &= (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6);
 	}
+    if (not match)
+    {
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            cerr << "WRONG " << i << " : " << test_force_constants[i] << ' ' << force_constants[i] << '\n';
+        }
+        cerr << '\n';
+    }
     return match;
 }
 
 int main()
 {
-	for (int test = 0; test < number_of_tests; test++)
+	for (int test = 0; test < 0/*number_of_tests*/; test++)
     {
         // preprocessing
         preprocess1();
 
         // GLOBAL MINIMUM FINDING
         // simulated annealing
-        force_constants = simulated_annealing(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
+        force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
         //force_constants = threshold_accepting(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
 
         // grading
@@ -179,7 +187,7 @@ int main()
     printf("Test 1 - Cutoff. Correct: %d/%d\n", result, number_of_tests);
 
     result = 0;
-    for (int test = 0; test < 0/*number_of_tests*/; test++)
+    for (int test = 0; test < number_of_tests; test++)
     {
         // preprocessing
         preprocess2();
