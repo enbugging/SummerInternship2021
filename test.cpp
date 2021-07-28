@@ -11,7 +11,7 @@ normal_distribution<double> gaussian (0.0,1.0);
 
 double 
     cutoff,
-    upper_limit = 3.0;
+    upper_limit = 0.2;
 int
 	number_of_terms = 6,
 	angle_step = 10,
@@ -156,13 +156,13 @@ int summary2()
     bool match = true;
     for (int i = 0; i < number_of_terms; i++)
 	{
-        match &= (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6);
+        match &= (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-5);
 	}
     if (not match)
     {
         for (int i = 0; i < number_of_terms; i++)
         {
-            cerr << "WRONG " << i << " : " << test_force_constants[i] << ' ' << force_constants[i] << '\n';
+            cerr << "WRONG " << i << " : " << test_force_constants[i] << ' ' << force_constants[i] << ' '  << (abs(force_constants[i] - (abs(test_force_constants[i]) >= cutoff ? test_force_constants[i] : 0.0)) <= 1.0e-6) << '\n';
         }
         cerr << '\n';
     }
@@ -178,7 +178,7 @@ int main()
 
         // GLOBAL MINIMUM FINDING
         // simulated annealing
-        force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
+        force_constants = simulated_annealing(angles, test_points, number_of_terms, 0, 1.0, upper_limit, cutoff);
         //force_constants = threshold_accepting(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
 
         // grading
@@ -195,7 +195,7 @@ int main()
         // GLOBAL MINIMUM FINDING
         // simulated annealing
         //force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
-        force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 2000, 1.0, upper_limit, cutoff);
+        force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
         //force_constants = threshold_accepting(angles, test_points, number_of_terms, 5000, 50.0, 3.0);
             
         // grading

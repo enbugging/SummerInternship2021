@@ -8,11 +8,10 @@ double force_field_calculate(
 
 static vector<double> dummy;
 
-double rmse_with_cutoff(
+double rmse(
     vector<double>& force_constants,
     vector<double>& angles,
     vector<double>& quantum_mechanics_points, 
-    double cutoff = 0, 
     vector<double>& quantum_mechanics_weights = dummy);
 
 vector<double> simulated_annealing(

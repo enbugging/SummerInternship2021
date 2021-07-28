@@ -12,7 +12,6 @@ using namespace std;
 /*	-----------------------------------------------------------------------------------
  *	Utility functions, supporthing simulated-annealing-related functions
  * */
-const double scale_factor = 1e4, height_difference = 1/scale_factor;
 vector<double> 
     dummy_angles,
     dummy_quantum_mechanics_points, 
@@ -45,15 +44,21 @@ double coefficient(
     double t, 
     double cutoff)
 {
+    double 
+        border_width = 1e-4, 
+        center = cutoff - border_width;
     if (abs(t) >= cutoff) return 1;
-    else return 1 - height_difference;
+    else if (abs(t) <= center) return 0;
+    //else return (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
+    else return cubical((abs(t) - cutoff)/border_width + 1);
+    //else return (abs(t) - cutoff)/border_width + 1;
+    //return 0.9999;
 }
 
-double rmse_with_cutoff(
+double rmse(
     vector<double>& force_constants,
     vector<double>& angles,
     vector<double>& quantum_mechanics_points, 
-    double cutoff, 
     vector<double>& quantum_mechanics_weights)
 {
     if (angles.empty()) return 0;
@@ -63,15 +68,10 @@ double rmse_with_cutoff(
         quantum_mechanics_weights.assign(angles.size(), 1.0);
     }
 
-    vector<double> new_force_constants = force_constants;
-    for (int i = 0; i < (int) force_constants.size(); i++)
-    {
-        new_force_constants[i] *= coefficient(force_constants[i], cutoff);
-    }
     double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int) angles.size(); i++)
     {
-        double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_points[i];
+        double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_points[i];
         sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
         sum_of_weights += quantum_mechanics_weights[i];
     }
@@ -92,22 +92,17 @@ double rmse_with_cutoff_and_simplicity_accuracy_trading(
         quantum_mechanics_weights.assign(angles.size(), 1.0);
     }
 
-    vector<double> new_force_constants = force_constants;
-    for (int i = 0; i < (int) force_constants.size(); i++)
-    {
-        new_force_constants[i] *= coefficient(force_constants[i], cutoff);
-    }
     double sum_of_squares_of_error = 0, sum_of_weights = 0;
     for (int i = 0; i < (int) angles.size(); i++)
     {
-        double error = force_field_calculate(new_force_constants, angles[i]) - quantum_mechanics_points[i];
+        double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_points[i];
         sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
         sum_of_weights += quantum_mechanics_weights[i];
     }
     sum_of_squares_of_error = sqrt(sum_of_squares_of_error/sum_of_weights);
     for (int i = 0; i < (int) force_constants.size(); i++)
     {
-        sum_of_squares_of_error += simplicity_accuracy_trading[i] * scale_factor * coefficient(force_constants[i], cutoff);
+        sum_of_squares_of_error += simplicity_accuracy_trading[i] * coefficient(force_constants[i], cutoff);
     }
     return sum_of_squares_of_error;
 }
@@ -122,7 +117,7 @@ DP rmse_with_cutoff_and_simplicity_accuracy_trading_wrapper(Vec_I_DP &x) {
     return rmse_with_cutoff_and_simplicity_accuracy_trading(y, dummy_angles, dummy_quantum_mechanics_points, dummy_cutoff, dummy_quantum_mechanics_weights);
 }
 
-DP rmse_with_cutoff_wrapper(Vec_I_DP &x) {
+DP rmse_wrapper(Vec_I_DP &x) {
     vector<double> y;
     y.resize(x.size());
     for (int i = 0; i < (int) x.size(); i++)
@@ -132,7 +127,7 @@ DP rmse_with_cutoff_wrapper(Vec_I_DP &x) {
             y[i] = x[i];
         }
     }
-    return rmse_with_cutoff(y, dummy_angles, dummy_quantum_mechanics_points, dummy_cutoff, dummy_quantum_mechanics_weights);
+    return rmse(y, dummy_angles, dummy_quantum_mechanics_points, dummy_quantum_mechanics_weights);
 }
 
 
@@ -181,7 +176,7 @@ vector<double> simulated_annealing(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_cutoff(new_force_constants, angles, quantum_mechanics_points, cutoff, quantum_mechanics_weights);
+        double new_square_error = rmse(new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -227,7 +222,7 @@ vector<double> simulated_annealing(
         }
     }
     
-    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_cutoff_wrapper);
+    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_wrapper);
     for (int i = 0; i < number_of_terms; i++)
     {
         force_constants[i] = p[i];
@@ -350,7 +345,7 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
     {
-        if (abs(force_constants[i]) < cutoff)
+        if (abs(force_constants[i]) <= cutoff)
         {
             force_constants[i] = 0;
         }
@@ -400,7 +395,7 @@ vector<double> threshold_accepting(
         {
             new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
         }
-        double new_square_error = rmse_with_cutoff(new_force_constants, angles, quantum_mechanics_points, cutoff, quantum_mechanics_weights);
+        double new_square_error = rmse(new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
         // if the new set of parameters is better, then we accept
         // else, we accept, with a probability corresponding to the temperature
@@ -420,8 +415,8 @@ vector<double> threshold_accepting(
     dummy_quantum_mechanics_points = quantum_mechanics_points;
     dummy_quantum_mechanics_weights = quantum_mechanics_weights;
     dummy_cutoff = cutoff;
-    DP FTOL = 1.0e-5;
-    const int IMAXSTEP = 10000;
+    DP FTOL = 1.0e-6;
+    const int IMAXSTEP = 100000;
     int iter;
     DP fret;
     Vec_DP p(0.0, number_of_terms); // variables
@@ -438,7 +433,7 @@ vector<double> threshold_accepting(
         }
     }
     
-    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_cutoff_wrapper);
+    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_wrapper);
     for (int i = 0; i < number_of_terms; i++)
     {
         force_constants[i] = p[i];
@@ -448,7 +443,7 @@ vector<double> threshold_accepting(
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
     {
-        if (abs(force_constants[i]) < cutoff)
+        if (abs(force_constants[i]) <= cutoff)
         {
             force_constants[i] = 0;
         }
@@ -514,7 +509,7 @@ vector<double> simulated_annealing_brute_force(
                     new_force_constants[j] += T * tan(random_step(rng, -M_PI/2, M_PI/2));
                 }
             }
-            double new_square_error = rmse_with_cutoff(new_force_constants, angles, quantum_mechanics_points, cutoff, quantum_mechanics_weights);
+            double new_square_error = rmse(new_force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
 
             // if the new set of parameters is better, then we accept
             // else, we accept, with a probability corresponding to the temperature
@@ -535,8 +530,8 @@ vector<double> simulated_annealing_brute_force(
         dummy_quantum_mechanics_points = quantum_mechanics_points;
         dummy_quantum_mechanics_weights = quantum_mechanics_weights;
         dummy_cutoff = cutoff;
-        DP FTOL = 1.0e-5;
-        const int IMAXSTEP = 10000;
+        DP FTOL = 1.0e-6;
+        const int IMAXSTEP = 100000;
         int iter;
         DP fret;
         Vec_DP p(0.0, number_of_terms); // variables
@@ -553,7 +548,7 @@ vector<double> simulated_annealing_brute_force(
             }
         }
         
-        NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_cutoff_wrapper);
+        NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_wrapper);
         for (int i = 0; i < number_of_terms; i++)
         {
             force_constants[i] = p[i];
@@ -567,6 +562,14 @@ vector<double> simulated_annealing_brute_force(
             best_force_constants = force_constants;
         }
         
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            if (abs(force_constants[i]) <= cutoff)
+            {
+                force_constants[i] = 0;
+            }
+        }
+
         /*
         cerr << "Result for choosing harmonic(s) ";
         for(int i = 0; i < number_of_terms; i++)
@@ -579,7 +582,7 @@ vector<double> simulated_annealing_brute_force(
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << "\nRMSE: " << best_square_error << ' ' << rmse_with_cutoff(force_constants, angles, quantum_mechanics_points, 0.0, quantum_mechanics_weights) << '\n';
+        cerr << "\nRMSE: " << best_square_error << ' ' << rmse_(force_constants, angles, quantum_mechanics_points, 0.0, quantum_mechanics_weights) << '\n';
         force_constants.clear();
         */
     }
