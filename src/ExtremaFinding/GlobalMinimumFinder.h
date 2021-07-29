@@ -14,6 +14,13 @@ double rmse(
     vector<double>& quantum_mechanics_points, 
     vector<double>& quantum_mechanics_weights = dummy);
 
+double rmse_with_cutoff_and_simplicity_accuracy_trading(
+    vector<double>& force_constants,
+    vector<double>& angles,
+    vector<double>& quantum_mechanics_points, 
+    double cutoff = 0, 
+    vector<double>& quantum_mechanics_weights = dummy);
+
 vector<double> simulated_annealing(
     vector<double>& angles,
     vector<double>& quantum_mechanics_points, 

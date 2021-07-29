@@ -55,14 +55,14 @@ double coefficient(
     double cutoff)
 {
     double 
-        border_width = min(1e-4, cutoff/2), 
-        center = cutoff - border_width;
-    if (abs(t) >= cutoff) return 1;
-    else if (abs(t) <= center) return 0;
-    //else return (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
-    else return cubical((abs(t) - cutoff)/border_width + 1);
-    //else return (abs(t) - cutoff)/border_width + 1;
-    //else return smooth_transition_function((abs(t) - center) / border_width);
+        border_width = 1e-4, 
+        center = cutoff + border_width;
+    if (abs(t) >= center) return 1;
+    else if (abs(t) <= cutoff) return 0;
+    //else return (1.0 - cos(M_PI / border_width * (abs(t) - cutoff)))/2.0;
+    //else return cubical((abs(t) - cutoff)/border_width);
+    else return (abs(t) - cutoff)/border_width;
+    //else return smooth_transition_function((abs(t) - cutoff) / border_width);
     //return 0.9999;
 }
 
@@ -318,12 +318,13 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
             best_square_error = new_square_error,
             force_constants = new_force_constants;
         }
-            
+
         for (int i = 0; i < number_of_terms; i++)
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
+        cerr << " - Error: " << best_square_error << '\n';
+
     }
 
     // further polishing
@@ -359,11 +360,6 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
     }
     //*/
     
-    for (int i = 0; i < number_of_terms; i++)
-    {
-        cerr << force_constants[i] << ' ';
-    }
-    cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
     {
@@ -377,8 +373,8 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
     {
         cerr << force_constants[i] << ' ';
     }
-    cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
-    
+    cerr << " - Error: " << best_square_error << '\n';
+
     return force_constants;
 }
 
@@ -576,7 +572,7 @@ vector<double> simulated_annealing_brute_force(
             }
         }
         
-        NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_wrapper);
+        NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, rmse_with_cutoff_and_simplicity_accuracy_trading_wrapper);
         for (int i = 0; i < number_of_terms; i++)
         {
             force_constants[i] = p[i];

@@ -11,9 +11,9 @@ normal_distribution<double> gaussian (0.0,1.0);
 
 double 
     cutoff,
-    upper_limit = 0.2;
+    upper_limit = 3.0; //0.2;
 int
-	number_of_terms = 6,
+	number_of_terms = 4,
 	angle_step = 10,
     number_of_tests = 1,
     result = 0;
@@ -99,11 +99,11 @@ int summary1()
 void preprocess2()
 {
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = 3981461068; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = 1137751000; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
     cerr << seed << '\n';
 
-    cutoff = 0.1;
+    cutoff = 0.0;
     test_force_constants.resize(number_of_terms);
     for (int i = 0; i < number_of_terms; i++)
     {
