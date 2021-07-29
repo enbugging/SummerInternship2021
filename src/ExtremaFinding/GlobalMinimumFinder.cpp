@@ -40,6 +40,16 @@ double cubical(double x)
     return -2 * x * x * x + 3 * x * x;
 }
 
+double non_analytic_smooth_function(double x)
+{
+    return x > 0 ? exp(-1/x) : 0.0;
+}
+
+double smooth_transition_function(double x)
+{
+    return non_analytic_smooth_function(x) / (non_analytic_smooth_function(x) + non_analytic_smooth_function(1 - x));
+}
+
 double coefficient(
     double t, 
     double cutoff)
@@ -52,6 +62,7 @@ double coefficient(
     //else return (1.0 - cos(M_PI / border_width * (abs(t) - center)))/2.0;
     else return cubical((abs(t) - cutoff)/border_width + 1);
     //else return (abs(t) - cutoff)/border_width + 1;
+    //else return smooth_transition_function((abs(t) - center) / border_width);
     //return 0.9999;
 }
 
