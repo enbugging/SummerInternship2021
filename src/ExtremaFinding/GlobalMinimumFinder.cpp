@@ -55,7 +55,7 @@ double coefficient(
     double cutoff)
 {
     double 
-        border_width = 1e-4, 
+        border_width = min(1e-4, cutoff/2), 
         center = cutoff - border_width;
     if (abs(t) >= cutoff) return 1;
     else if (abs(t) <= center) return 0;
@@ -86,7 +86,7 @@ double rmse(
         sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
         sum_of_weights += quantum_mechanics_weights[i];
     }
-    return sum_of_squares_of_error;
+    return sqrt(sum_of_squares_of_error/sum_of_weights);
 }
 
 double rmse_with_cutoff_and_simplicity_accuracy_trading(
@@ -318,6 +318,12 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
             best_square_error = new_square_error,
             force_constants = new_force_constants;
         }
+            
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            cerr << force_constants[i] << ' ';
+        }
+        cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
     }
 
     // further polishing
@@ -353,6 +359,11 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
     }
     //*/
     
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        cerr << force_constants[i] << ' ';
+    }
+    cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
     // setting trapped coefficients to be zero
     for (int i = 0; i < number_of_terms; i++)
     {
@@ -361,7 +372,13 @@ vector<double> simulated_annealing_with_simplicity_accuracy_trading(
             force_constants[i] = 0;
         }
     }
-
+    
+    for (int i = 0; i < number_of_terms; i++)
+    {
+        cerr << force_constants[i] << ' ';
+    }
+    cerr << " - Error: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
+    
     return force_constants;
 }
 
@@ -487,7 +504,7 @@ vector<double> simulated_annealing_brute_force(
     best_force_constants.resize(number_of_terms);
     double optimal_square_error = numeric_limits<double>::max();
 
-    for (int mask = 1; mask < (1<<number_of_terms); mask++)
+    for (int mask = 0; mask < (1<<number_of_terms); mask++)
     {
         // initialization
         vector<double> force_constants;
@@ -565,6 +582,19 @@ vector<double> simulated_annealing_brute_force(
             force_constants[i] = p[i];
         }
         //*/
+        
+        best_square_error = rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights);
+        for (int i = 0; i < number_of_terms; i++)
+        {
+            if (abs(force_constants[i]) <= cutoff)
+            {
+                force_constants[i] = 0;
+            }
+            else
+            {
+                best_square_error += simplicity_accuracy_trading[i];
+            }
+        }
 
         if (optimal_square_error > best_square_error)
         //if (mask == (1<<number_of_terms) - 1)
@@ -572,16 +602,8 @@ vector<double> simulated_annealing_brute_force(
             optimal_square_error = best_square_error;
             best_force_constants = force_constants;
         }
-        
-        for (int i = 0; i < number_of_terms; i++)
-        {
-            if (abs(force_constants[i]) <= cutoff)
-            {
-                force_constants[i] = 0;
-            }
-        }
 
-        /*
+        ///*
         cerr << "Result for choosing harmonic(s) ";
         for(int i = 0; i < number_of_terms; i++)
         {
@@ -593,9 +615,9 @@ vector<double> simulated_annealing_brute_force(
         {
             cerr << force_constants[i] << ' ';
         }
-        cerr << "\nRMSE: " << best_square_error << ' ' << rmse_(force_constants, angles, quantum_mechanics_points, 0.0, quantum_mechanics_weights) << '\n';
+        cerr << "\nRMSE: " << best_square_error << ' ' << rmse(force_constants, angles, quantum_mechanics_points, quantum_mechanics_weights) << '\n';
         force_constants.clear();
-        */
+        //*/
     }
 
     return best_force_constants;

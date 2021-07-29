@@ -15,7 +15,7 @@ double
 int
 	number_of_terms = 6,
 	angle_step = 10,
-    number_of_tests = 100,
+    number_of_tests = 1,
     result = 0;
 vector<double>
 	angles,
@@ -99,10 +99,11 @@ int summary1()
 void preprocess2()
 {
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = 3981461068; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
+    cerr << seed << '\n';
 
-    cutoff = 0.0;
+    cutoff = 0.1;
     test_force_constants.resize(number_of_terms);
     for (int i = 0; i < number_of_terms; i++)
     {
@@ -133,7 +134,7 @@ void preprocess2()
         test_points[i] = force_field_calculate(test_force_constants, angles[i]);
     }
 
-    test_force_constants = simulated_annealing_brute_force(angles, test_points, number_of_terms, 5000, 1.0, upper_limit);
+    test_force_constants = simulated_annealing_brute_force(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
 }
 
 int summary2()
