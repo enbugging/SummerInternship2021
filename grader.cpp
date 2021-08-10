@@ -60,7 +60,7 @@ void summary()
 double wrapper_function_for_finding_local_minima(
 	vector<double> force_constants)
 {
-	return rmse_with_cutoff(0.1, force_constants, angles, quantum_mechanics_points);
+	return rmse_with_cutoff_and_simplicity_accuracy_trading(force_constants, angles, quantum_mechanics_points, 0.1);
 }
 
 double camel_function(
@@ -84,7 +84,7 @@ int main()
 	// simulated annealing
 	//force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0);
 	//force_constants = threshold_accepting(angles, quantum_mechanics_points, number_of_terms, 5000, 50.0, 3.0);
-	force_constants = simulated_annealing_with_cutoff(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.1, quantum_mechanics_weights);
+	force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.1);
 		
 	// grading
 	summary();
@@ -94,7 +94,7 @@ int main()
 	vector<double> run;
 	for (int i = 0; i < 10; i++)
 	{
-		force_constants = simulated_annealing_with_cutoff(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0, 0.0);
+		force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0, 0.0);
 		double sum_of_squares_of_error = rmse(force_constants, angles, quantum_mechanics_points);
 		average += sum_of_squares_of_error;
 		run.push_back(sum_of_squares_of_error);

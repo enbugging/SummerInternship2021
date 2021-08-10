@@ -5,17 +5,18 @@ using namespace std;
 
 #include "src/ExtremaFinding/GlobalMinimumFinder.h"
 #include "src/ExtremaFinding/LocalMinimaFinder.h"
+#include "src/ExtremaFinding/ForceConstantFinder.h"
 
 #define random_step(rng,min,max) min + (double)rng() / UINT_MAX * (max - min)
 normal_distribution<double> gaussian (0.0,1.0);
 
 double 
     cutoff,
-    upper_limit = 3.0; //0.2;
+    upper_limit = 3.0;
 int
 	number_of_terms = 4,
 	angle_step = 10,
-    number_of_tests = 1,
+    number_of_tests = 100,
     result = 0;
 vector<double>
 	angles,
@@ -51,7 +52,7 @@ void preprocess1()
         }
     }
     angles.clear();
-    for (int i = 0; i < 360; i += angle_step)
+    for (int i = -180 + angle_step; i <= 180; i += angle_step)
     {
         angles.push_back(i);
     }
@@ -99,7 +100,7 @@ int summary1()
 void preprocess2()
 {
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = 1137751000; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = chrono::steady_clock::now().time_since_epoch().count(); //1777732000; 2315039500; 1137751000; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
     cerr << seed << '\n';
 
@@ -124,7 +125,7 @@ void preprocess2()
         }
     }
     angles.clear();
-    for (int i = 0; i < 360; i += angle_step)
+    for (int i = -180 + angle_step; i <= 180; i += angle_step)
     {
         angles.push_back(i);
     }
@@ -134,7 +135,7 @@ void preprocess2()
         test_points[i] = force_field_calculate(test_force_constants, angles[i]);
     }
 
-    test_force_constants = simulated_annealing_brute_force(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
+    test_force_constants = simulated_annealing_brute_force(angles, test_points, number_of_terms, 5000, 0.0, upper_limit, cutoff);
 }
 
 int summary2()
@@ -185,7 +186,7 @@ int main()
         // grading
         result += summary1();
     }
-    printf("Test 1 - Cutoff. Correct: %d/%d\n", result, number_of_tests);
+    //printf("Test 1 - Cutoff. Correct: %d/%d\n", result, number_of_tests);
 
     result = 0;
     for (int test = 0; test < number_of_tests; test++)
@@ -195,12 +196,22 @@ int main()
 
         // GLOBAL MINIMUM FINDING
         // simulated annealing
-        //force_constants = simulated_annealing(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
-        force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 5000, 1.0, upper_limit, cutoff);
-        //force_constants = threshold_accepting(angles, test_points, number_of_terms, 5000, 50.0, 3.0);
-            
+        //force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, test_points, number_of_terms, 5000, 10.0, upper_limit, cutoff);
+        /*
+        for (double i = -0.1; i < 0.3; i += 1e-3)
+        {
+            force_constants = {0, 0, 0, i};
+            double error = rmse_with_cutoff_and_simplicity_accuracy_trading(force_constants, angles, test_points) - rmse(force_constants, angles, test_points);
+            cerr << fixed << setprecision(6) << i << ' ' << rmse(force_constants, angles, test_points) << " + " << error << " = " << rmse_with_cutoff_and_simplicity_accuracy_trading(force_constants, angles, test_points) << '\n';
+        } 
+        */ 
+
+        // exact algorithm
+        force_constants = find_with_simplicity_accuracy_trading(angles, test_points, number_of_terms);
         // grading
         result += summary2();
     }
     printf("Test 2 - Simplicity-accuracy tradding. Correct: %d/%d", result, number_of_tests);
 }
+
+
