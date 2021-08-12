@@ -42,6 +42,27 @@ void preprocess()
 	quantum_mechanics_file.close();
 }
 
+
+double rmse(
+    vector<double>& force_constants)
+{
+    if (angles.empty()) return 0;
+    // if the function is unweighted
+    if (quantum_mechanics_weights.empty())
+    {
+        quantum_mechanics_weights.assign(angles.size(), 1.0);
+    }
+
+    double sum_of_squares_of_error = 0, sum_of_weights = 0;
+    for (int i = 0; i < (int) angles.size(); i++)
+    {
+        double error = force_field_calculate(force_constants, angles[i]) - quantum_mechanics_points[i];
+        sum_of_squares_of_error += quantum_mechanics_weights[i] * error * error;
+        sum_of_weights += quantum_mechanics_weights[i];
+    }
+    return sqrt(sum_of_squares_of_error/sum_of_weights);
+}
+
 void summary()
 {
 	// summary
@@ -52,7 +73,7 @@ void summary()
 	{
 		printf("%lf ", force_constants[i]);
 	}
-	double r = rmse(force_constants, angles, quantum_mechanics_points);
+	double r = rmse(force_constants);
 	printf("\nSquare error: %lf\n", r);
 }
 
@@ -63,9 +84,8 @@ int main()
 
 	// GLOBAL MINIMUM FINDING
 	// simulated annealing
-	//force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0);
+    force_constants = simulated_annealing(rmse, number_of_terms, 3.0);
 	//force_constants = threshold_accepting(angles, quantum_mechanics_points, number_of_terms, 5000, 50.0, 3.0);
-	force_constants = simulated_annealing_with_simplicity_accuracy_trading(angles, quantum_mechanics_points, number_of_terms, 10000, 1.5, 3.0, 0.1);
 		
 	// grading
 	summary();
