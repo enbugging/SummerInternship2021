@@ -4,7 +4,6 @@
 using namespace std;
 
 #include "src/ExtremaFinding/GlobalMinimumFinder.h"
-#include "src/ExtremaFinding/LocalMinimaFinder.h"
 
 string
 	quantum_mechanics_url_points = "ref.dat", 
@@ -57,24 +56,6 @@ void summary()
 	printf("\nSquare error: %lf\n", r);
 }
 
-double wrapper_function_for_finding_local_minima(
-	vector<double> force_constants)
-{
-	return rmse_with_cutoff_and_simplicity_accuracy_trading(force_constants, angles, quantum_mechanics_points, 0.1);
-}
-
-double camel_function(
-	vector<double> x)
-{
-	return 4.0 * pow(x[0], 2) - 2.1 * pow(x[0], 4) + 1.0/3.0 * pow(x[0], 6) + x[0] * x[1] - 4.0 * pow(x[1], 2) + 4.0 * pow(x[1], 4);
-}
-
-double rastrigin_function(
-	vector<double> x)
-{
-	return pow(x[0], 2) + pow(x[1], 2) - cos(18.0 * x[0]) - cos(18.0 * x[1]);
-}
-
 int main()
 {
 	// preprocessing
@@ -88,43 +69,4 @@ int main()
 		
 	// grading
 	summary();
-
-	/*
-	double average = 0;
-	vector<double> run;
-	for (int i = 0; i < 10; i++)
-	{
-		force_constants = simulated_annealing(angles, quantum_mechanics_points, number_of_terms, 5000, 1.0, 3.0, 0.0);
-		double sum_of_squares_of_error = rmse(force_constants, angles, quantum_mechanics_points);
-		average += sum_of_squares_of_error;
-		run.push_back(sum_of_squares_of_error);
-	}
-	double sd = 0;
-	for (int i = 0; i < 10; i++)
-	{
-		sd += (run[i] - average) * (run[i] - average);
-	}
-	printf("Average: %lf\nStandard deviation: %lf", average/10, sqrt(sd/10));
-	*/
-
-	// LOCAL MINIMA FINDING
-	/*
-	result = MLSL(number_of_terms, 6.0, wrapper_function_for_finding_local_minima);
-	//number_of_terms = 2;
-	//result = MLSL(number_of_terms, 50.0, camel_function);
-	//result = MLSL(number_of_terms, 1.0, rastrigin_function);
-	cerr << result.size() << '\n';
-	
-	for (int i = 0; i < (int) result.size(); i++)
-	{
-		cerr << "Minima " << i << " - RMSE: " << result[i].value << '\n';
-		
-		cerr << "Force constants: ";
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			cerr << result[i].x[j] << " ";
-		}
-		cerr << '\n';
-	}
-	*/
 }
