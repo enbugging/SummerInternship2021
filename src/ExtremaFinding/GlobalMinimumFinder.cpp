@@ -65,8 +65,8 @@ vector<double> simulated_annealing(
     int number_of_steps)
 {
     // Power's algorithm initialization
-    DP FTOL = 1.0e-6;
-    const int IMAXSTEP = 100000;
+    DP FTOL = 1.0e-12;
+    const int IMAXSTEP = 1000000;
     int iter;
     DP fret;
     Vec_DP p(0.0, D); // variables
@@ -85,23 +85,9 @@ vector<double> simulated_annealing(
     }
 
     double 
-        delta_f_ini = 0, 
         beta = 100, 
         T_0g = r / (2 * tan(M_PI/(2 * (1 + beta)))), 
         former_value = objective_function(x);
-    int trial = 1000;
-    for (int i = 0; i < trial; i++)
-    {
-        dx = standard_cauchy_vector(D, rng);
-        for (int j = 0; j < D; j++)
-        {
-            x_dx[j] = x[j] + dx[j];
-        }
-        delta_f_ini += objective_function(x_dx) - former_value;
-    }
-    delta_f_ini /= trial;
-    double p_ini = 0.9,  
-        T_0p = -delta_f_ini/log(p_ini);
     for (int i = 2; i <= number_of_steps; i++)
     {
         dx = standard_cauchy_vector(D, rng);
@@ -112,7 +98,7 @@ vector<double> simulated_annealing(
         double 
             new_value = objective_function(x_dx), 
             delta_f = new_value - former_value;
-        if (uniform(rng) <= exp(-delta_f * i / T_0p))
+        if (uniform(rng) <= exp(-delta_f * i / T_0g))
         {
             former_value = new_value;
             x = x_dx;
@@ -131,7 +117,7 @@ vector<double> simulated_annealing(
             xi[i][j] = (i == j ? x[i] : 0.0);
         }
     }
-    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
+    //NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
     for (int i = 0; i < D; i++)
     {
         x[i] = p[i];
