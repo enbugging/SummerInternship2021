@@ -27,8 +27,7 @@ vector<double>
 /* 
 Auxiliary functions
  */
-int 
-    multiplicities[6] = {0, 1, 2, 3, 4, 6};
+int multiplicities[6] = {0, 1, 2, 3, 4, 6};
 double 
     dummy_cutoff, 
     simplicity_accuracy_trading[6] = {0.05, 0.1, 0.15, 0.2, 0.25, 0.35};
