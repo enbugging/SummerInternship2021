@@ -2,7 +2,6 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#include "GlobalMinimumFinder.h"
 #ifndef _NR_
 #define _NR_
 #include "../numerical_recipes/nr.h" // numerical recipes
@@ -31,11 +30,8 @@ vector<double> find_with_simplicity_accuracy_trading(
     // initialization
     int multiplicities[6] = {0, 1, 2, 3, 4, 6};
     double simplicity_accuracy_trading[6] = {0.05, 0.1, 0.15, 0.2, 0.25, 0.35};
-    vector<double> force_constants, threshold;
-    vector<pair<double, int> > auxiliary;
-    force_constants.resize(number_of_terms);
-    threshold.resize(number_of_terms);
-    auxiliary.resize(number_of_terms);
+    vector<double> force_constants(number_of_terms), threshold(number_of_terms);
+    vector<pair<double, int> > auxiliary(number_of_terms);
 
     double sum_of_squares_of_energy = 0;
     for (int i = 0; i < (int) angles.size(); i++)
