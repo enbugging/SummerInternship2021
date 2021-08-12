@@ -267,8 +267,36 @@ int summary2()
     return match;
 }
 
+double test_function(vector<double>& x)
+{
+    return 2*pow(x[0], 6) - 12.2*pow(x[0], 5) + 21.2*pow(x[0], 4) + 6.2*x[0] - 6.4*pow(x[0], 3)
+            - 4.7*pow(x[0], 2) + pow(x[1], 6) - 11*pow(x[1], 5) + 43.3*pow(x[1], 4) - 10*x[1]
+            - 74.8*pow(x[1], 3) + 56.9*pow(x[1], 2) - 4.1*x[0]*x[1] - 0.1*pow(x[0], 2)*pow(x[1], 2)
+            + 0.4*pow(x[1], 2)*x[0] + 0.4 * pow(x[0], 2) * x[1];
+}
+
 int main()
 {
+    //*
+    vector<double> x;
+	double prev_mean = 0, current_mean = 0, M = 0, sum_error = 0;
+    int trial = 1000;
+	for (int i = 1; i <= trial; i++)
+	{
+		x = simulated_annealing(test_function, 2, 10.0);
+		double error = test_function(x);
+		
+		sum_error += error;
+		prev_mean = current_mean;
+		current_mean = (prev_mean * (i - 1) + error)/i;
+		M += (error - current_mean) * (error - prev_mean);
+	}
+	cerr << "Error average: " << sum_error/trial << '\n';
+	cerr << "Standard deviation: " << M/(trial-1) << '\n';
+    cerr << "95% confidence interval:" << 1.960 * M/(trial-1)/sqrt(trial) << '\n';
+	//*/
+    return 0;
+
 	for (int test = 0; test < 0/*number_of_tests*/; test++)
     {
         // preprocessing
