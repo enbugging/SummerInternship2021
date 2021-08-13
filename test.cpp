@@ -195,7 +195,7 @@ int summary1()
 void preprocess2()
 {
     // random seed, can be fixed for rerun of experiments
-    unsigned int seed = 1777732000; //1777732000; 2315039500; 1137751000; //3981461068; chrono::steady_clock::now().time_since_epoch().count();
+    unsigned int seed = 3981461068; //1777732000; 2315039500; 1137751000; 3981461068; chrono::steady_clock::now().time_since_epoch().count();
     mt19937 rng(seed);
     cerr << seed << '\n';
 
@@ -277,10 +277,10 @@ double test_function(vector<double>& x)
 
 int main()
 {
-    //*
+    /*
     vector<double> x;
 	double prev_mean = 0, current_mean = 0, M = 0, sum_error = 0;
-    int trial = 1000;
+    int trial = 10;
 	for (int i = 1; i <= trial; i++)
 	{
 		x = simulated_annealing(test_function, 2, 10.0);
@@ -294,8 +294,8 @@ int main()
 	cerr << "Error average: " << sum_error/trial << '\n';
 	cerr << "Standard deviation: " << M/(trial-1) << '\n';
     cerr << "95% confidence interval:" << 1.960 * M/(trial-1)/sqrt(trial) << '\n';
-	//*/
     return 0;
+	//*/
 
 	for (int test = 0; test < 0/*number_of_tests*/; test++)
     {
@@ -334,8 +334,11 @@ int main()
         //*/
         // GLOBAL MINIMUM FINDING
         // simulated annealing
+	    auto t1 = chrono::high_resolution_clock::now();
         force_constants = simulated_annealing(rmse_with_cutoff_and_simplicity_accuracy_trading, number_of_terms, upper_limit);
-
+        auto t2 = chrono::high_resolution_clock::now();
+        cerr << "Total runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0 << '\n';
+        
         // exact algorithm
         //force_constants = find_with_simplicity_accuracy_trading(angles, test_points, number_of_terms);
         // grading
