@@ -8,7 +8,7 @@ using namespace std;
 int multiplicities[5] = {1, 2, 3, 4, 6};
 string quantum_mechanic_data = "soft_dihe_C1_C2.dat";
 int
-	number_of_terms = 4,
+	number_of_terms = 3,
 	number_of_data_points = 36, 
 	number_of_angles = 9, 
 	nbrs_of_central_atom_1 = 4,
@@ -73,7 +73,8 @@ void preprocess()
 	}
 	quantum_mechanics_file.close();
 
-	/*
+	//*
+	number_of_angles = 4;
 	vector<tuple<double, int> > temp(number_of_angles * (number_of_terms - 1));
 	cnt = 0;
 	for (int i = 0; i < number_of_angles; i++)
@@ -81,15 +82,19 @@ void preprocess()
 		double sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
 		// preparing 2 sequences of interaction and cos(multiplicity * angle)
 		vector<double> a(number_of_data_points);
+		double max_a = numeric_limits<double>::min(), min_a = numeric_limits<double>::max(), delta;
 		for (int j = 0; j < number_of_data_points; j++)
 		{
 			a[j] = interaction[j][i];
+			min_a = min(min_a, a[j]);
+			max_a = max(max_a, a[j]);
 			sumA += a[j];
 			sumA2 += a[j] * a[j];
 		}
+		delta = max_a - min_a;
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (j != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
 			{
 				sumB = 0, sumB2 = 0, sumAB = 0;
 				for (int k = 0; k < number_of_data_points; k++)
@@ -102,7 +107,8 @@ void preprocess()
 
 				temp[cnt] = 
 				{
-					(number_of_data_points * sumAB - sumA * sumB) / 
+					delta * 
+					abs(number_of_data_points * sumAB - sumA * sumB) / 
 					sqrt(
 						(number_of_data_points * sumA2 - sumA * sumA) * 
 						(number_of_data_points * sumB2 - sumB * sumB)
@@ -116,7 +122,7 @@ void preprocess()
 	sort(temp.begin(), temp.end());
 	for (int i = 0; i < (int) temp.size(); i++)
 	{
-		rank_by_pearson[get<1>(temp[i])] = i + 1;
+		rank_by_pearson[get<1>(temp[i])] = i;
 	}
 	//*/
 }
@@ -147,16 +153,19 @@ double objective_function(
 	vector<double>& set_of_force_constants)
 {
 	double result = rmse(set_of_force_constants);
-	/*
+	//*
 	// rank force constants
 	int cnt = 0;
 	vector<tuple<double, int> > temp(number_of_angles * (number_of_terms - 1));
-	for (int i = 0; i < (int) temp.size(); i++)
+	for (int i = 0; i < number_of_angles; i++)
 	{
-		if (i != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+		for (int j = 0; j < number_of_terms; j++)
 		{
-			temp[cnt] = {set_of_force_constants[i], cnt};
-			cnt++;
+			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			{
+				temp[cnt] = {set_of_force_constants[number_of_terms * i + j], number_of_terms * i + j};
+				cnt++;
+			}
 		}
 	}
 	sort(temp.begin(), temp.end());
@@ -168,7 +177,7 @@ double objective_function(
 	}
 	result += -(1 - ans/(temp.size() * (temp.size() * temp.size() - 1)));
 	//*/
-	return result;
+	return 1e7 * result;
 }
 
 int main()
@@ -176,9 +185,9 @@ int main()
 	preprocess();
 	int trial = 10;
 	double sum_error = 0;
-	number_of_terms = 6;
-	number_of_angles = 9;
-	//*
+	number_of_angles = 4;
+	auto t1 = chrono::high_resolution_clock::now();
+	/*
 	double prev_mean = 0, current_mean = 0, M = 0;
 	for (int i = 1; i <= trial; i++)
 	{
@@ -195,9 +204,9 @@ int main()
     cerr << "95% confidence interval:" << 1.960 * M/(trial-1)/sqrt(trial) << '\n';
 	//*/
 
-	/*
+	//*
 	set_of_force_constants = simulated_annealing(objective_function, number_of_angles * number_of_terms + 1, 3.0);
-	cerr << "Error: " << objective_function(set_of_force_constants) << '\n';
+	cerr << "Error: " << objective_function(set_of_force_constants) / 1e7  << '\n';
 	cerr << "Constant: " << set_of_force_constants[set_of_force_constants.size() - 1] << '\n';
 	for (int i = 0; i < number_of_angles; i++)
 	{
@@ -209,4 +218,7 @@ int main()
 		cerr << '\n';
 	}
 	//*/
+	auto t2 = chrono::high_resolution_clock::now();
+	cerr << "Total runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0 << '\n';
+	//cerr << "Average runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0/trial << '\n'; 
 }
