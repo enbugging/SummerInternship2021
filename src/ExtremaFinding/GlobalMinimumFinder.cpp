@@ -117,7 +117,7 @@ vector<double> simulated_annealing(
             xi[i][j] = (i == j ? x[i] : 0.0);
         }
     }
-    //NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
+    NR::powell(p, xi, FTOL, IMAXSTEP, iter, fret, objective_function_wrapper);
     for (int i = 0; i < D; i++)
     {
         x[i] = p[i];
