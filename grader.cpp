@@ -92,13 +92,22 @@ void input()
 		while(s[0] != '|') s.erase(0, 1);
 		s.erase(0, 1);
 		while(s[0] == ' ') s.erase(0, 1);
+
 		
 		// get id of the angle
-		if (angles_id_dict.find(s) == angles_id_dict.end())
+		if (angles_id_dict.find(s) != angles_id_dict.end())
 		{
-			angles_id_dict[s] = number_of_distinct_angles++;
+			angles_id[i] = angles_id_dict[s];
 		}
-		angles_id[i] = angles_id_dict[s];
+		else
+		{
+			string t = s;
+			reverse(t.begin(), t.end());
+			angles_id_dict[s] = number_of_distinct_angles;
+			angles_id_dict[t] = number_of_distinct_angles++;
+			angles_id[i] = angles_id_dict[s];
+		}
+		
 	}
 
 	// read actual data
@@ -251,7 +260,7 @@ double objective_function(
 			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
 		}
 	}
-	return rmse(set_of_force_constants) + interaction_correlation(set_of_force_constants);
+	return rmse(set_of_force_constants);// + interaction_correlation(set_of_force_constants);
 }
 
 int main()
