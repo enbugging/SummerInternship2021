@@ -13,7 +13,13 @@ vector<double> standard_cauchy_vector(
     mt19937& rng)
 {
     cauchy_distribution<double> cauchy_dist (0.0,1.0);
-    vector<double> v(D-1), w(D-1), x(D);
+    vector<double> x(D);
+    if (D == 1)
+    {
+        x[0] = cauchy_dist(rng);
+        return x;
+    }
+    vector<double> v(D-1), w(D-1);
     for (int i = 0; i < D-1; i++)
     {
         v[i] = cauchy_dist(rng);
