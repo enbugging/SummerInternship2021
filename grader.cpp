@@ -172,8 +172,6 @@ void correlation_preparation()
 				);
 			
 			pearson_interact_vs_angles[i][j] = delta * p;
-
-			log_file << "Int " << i << ' ' << multiplicities[j] << ": " << delta << ' ' << p << ' ' << pearson_interact_vs_angles[i][j] << '\n';
 		}
 	}
 }
@@ -237,6 +235,56 @@ double interaction_correlation(
 					(cnt * sumB2 - sumB * sumB)
 				)
 			)/2;
+}
+
+double variance_of_main_multiplicity(
+	vector<double>& set_of_force_constants,
+	double weight = 1.0)
+{
+	double sum = 0;
+	int idx_main_mult = -1;
+	for (int i = 0; i < number_of_terms; i++)
+	{
+		if (multiplicities[i] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+		{
+			idx_main_mult = i;
+			break;
+		}
+	}
+	if (idx_main_mult != -1)
+	{
+		for (int i = 0; i < number_of_angles; i++)
+		{
+			for (int j = 0; j < i; j++)
+			{
+				double d = 
+					set_of_force_constants[i * number_of_terms + idx_main_mult] - 
+					set_of_force_constants[j * number_of_terms + idx_main_mult];
+				sum += d * d;
+			}
+		}
+	}
+	return weight * sqrt(sum/(number_of_angles * (number_of_angles - 1)/2));
+}
+
+double magnitude_of_force_constants(
+	vector<double>& set_of_force_constants_reduced)
+{
+	double sum = 0;
+	int no_of_dist_angles = 
+		(set_of_force_constants_reduced.size() - 1)/number_of_terms;
+	for (int i = 0; i < no_of_dist_angles; i++)
+	{
+		for (int j = 0; j < number_of_terms; j++)
+		{
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
+			sum += 
+				set_of_force_constants_reduced[i * number_of_terms + j] * 
+				set_of_force_constants_reduced[i * number_of_terms + j] / 
+				multiplicities[j];
+		}
+	}
+	return sqrt(sum/(no_of_dist_angles * (number_of_terms - 1)));
 }
 /* 
 --------------------------------------------------------------------------------------
@@ -321,108 +369,22 @@ double objective_function(
 	vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 	set_of_force_constants[set_of_force_constants.size() - 1] = 
 	set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
-	double result = 0, sum = 0;
+	double result = 0;
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
 			set_of_force_constants[number_of_terms * i + j] = 
 			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
-
-			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
-			{
-				set_of_force_constants[number_of_terms * i + j] = abs(set_of_force_constants[number_of_terms * i + j]);
-			}
 		}
 	}
 	//*
 	double r = rmse(set_of_force_constants);
-	//result += rmse_with_cutoff_and_simplicity_accuracy_trading(set_of_force_constants);
-	result += rmse(set_of_force_constants);
-	//*/
-	//*
-	sum = 0;
-	for (int i = 0; i < number_of_angles; i++)
-	{
-		for (int j = 0; j < i; j++)
-		{
-			double d = set_of_force_constants[i * number_of_terms + 2] - set_of_force_constants[j * number_of_terms + 2];
-			sum += d * d;
-		}
-	}
-	result += exp(-r) * sqrt(sum/(number_of_angles * (number_of_angles - 1)/2));
-	//*/
-
-	// restrain magnitudes of force constants
-	/*
-	sum = 0;
-	int no_of_dist_angles = 
-		(set_of_force_constants_reduced.size() - 1)/number_of_terms;
-	for (int i = 0; i < no_of_dist_angles; i++)
-	{
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
-			sum += 
-				set_of_force_constants_reduced[i * number_of_terms + j] * 
-				set_of_force_constants_reduced[i * number_of_terms + j] / 
-				multiplicities[j];
-		}
-	}
-	result += sqrt(sum/(no_of_dist_angles * (number_of_terms - 1)));
-	//*/
+	result += rmse_with_cutoff_and_simplicity_accuracy_trading(set_of_force_constants);
+	//result += rmse(set_of_force_constants);
+	result += variance_of_main_multiplicity(set_of_force_constants, exp(-r));
+	//result += magnitude_of_force_constants(set_of_force_constants_reduced);
 	result += interaction_correlation(set_of_force_constants);
-	return result;
-}
-
-double test_function(
-	vector<double>& set_of_force_constants_reduced)
-{
-	// expand the set of force constants
-	double result = 0;
-	vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
-	set_of_force_constants[set_of_force_constants.size() - 1] = 
-	set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
-	for (int i = 0; i < number_of_angles; i++)
-	{
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			set_of_force_constants[number_of_terms * i + j] = 
-			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
-
-			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
-			{
-				set_of_force_constants[number_of_terms * i + j] = abs(set_of_force_constants[number_of_terms * i + j]);
-			}
-		}
-	}
-	double sum_of_square_error = 0;
-	for (int i = 0; i < number_of_data_points; i++)
-	{
-		double error = energy[i] - set_of_force_constants[set_of_force_constants.size()-1];
-		//log_file << energy[i] << ' ' << error << '\n';
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			double angle = angles[i][j];
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				error -= 
-				set_of_force_constants[j * number_of_terms + k] * 
-				cos(multiplicities[k] * angle / 180.0 * M_PI);
-				
-				/*
-				log_file << "Minus contribution of mult " << multiplicities[k] << ", angle " << j << ": " << 
-				set_of_force_constants[j * number_of_terms + k] << " x " << 
-				cos(multiplicities[k] * angle / 180.0 * M_PI) << " = " << 
-				set_of_force_constants[j * number_of_terms + k] * 
-				cos(multiplicities[k] * angle / 180.0 * M_PI) << '\n';
-				//*/
-			}
-		}
-		sum_of_square_error += error * error;
-		//log_file << "ADD: " << error << '\n';
-	}
-	result += sqrt(sum_of_square_error/number_of_data_points);
 	return result;
 }
 
@@ -439,12 +401,6 @@ int main()
 	for (int i = 1; i <= trial; i++)
 	{
 		vector<double> set_of_force_constants_reduced = simulated_annealing(objective_function, number_of_distinct_angles * number_of_terms + 1, 1.0);
-		double error = test_function(set_of_force_constants_reduced);
-		sum_error += error;
-		prev_mean = current_mean;
-		current_mean = (prev_mean * (i - 1) + error)/i;
-		M += (error - current_mean) * (error - prev_mean);
-
 		// expand the set of force constants
 		vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 		set_of_force_constants[set_of_force_constants.size() - 1] = 
@@ -458,7 +414,17 @@ int main()
 			}
 		}
 		
-		log_file << "Error: " << error << '\n';
+		double error = rmse(set_of_force_constants);
+		sum_error += error;
+		prev_mean = current_mean;
+		current_mean = (prev_mean * (i - 1) + error)/i;
+		M += (error - current_mean) * (error - prev_mean);
+		
+		log_file << "Error: " 
+				<< error << ' ' 
+				<< rmse_with_cutoff_and_simplicity_accuracy_trading(set_of_force_constants) << ' ' 
+				<< interaction_correlation(set_of_force_constants) << ' ' 
+				<< variance_of_main_multiplicity(set_of_force_constants, exp(-error)) << '\n';
 		log_file << "Offset constant: " << set_of_force_constants[set_of_force_constants.size() - 1] << '\n';
 		for (int k = 0; k < number_of_angles; k++)
 		{
