@@ -6,23 +6,25 @@ using namespace std;
 #include "src/ExtremaFinding/GlobalMinimumFinder.h"
 
 const int number_of_angles = 9;
-//string quantum_mechanic_data = "soft_dihe_C1_C2.dat";
-string quantum_mechanic_data = "soft_dihe_C2_C3.dat";
-//string quantum_mechanic_data = "propane_soft_dihe_C1_C2.dat";
+//string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
+//string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
+string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36, 
 	number_of_distinct_angles, 
 	nbrs_of_central_atom_1,
-	nbrs_of_central_atom_2,
+	nbrs_of_central_atom_2, 
 	angles_id[number_of_angles], 
 	multiplicities[5] = {1, 2, 3, 4, 6};
+double 
+    simplicity_accuracy_trading[5] = {0.1, 0.15, 0.2, 0.25, 0.35};
 vector<vector<double> > 
 	angles, 
-	interaction;
+	interaction, 
+	pearson_interact_vs_angles;
 vector<double> 
-	energy,  
-	pearson_rank, 
+	energy,
 	interact_mag;
 map<string, int> angles_id_dict;
 
@@ -38,7 +40,7 @@ QuickFF: toward a generally applicable methodology
 to quickly derive accurate force fields for
 Metal-Organic Frameworks from ab initio input
  */
-int principle_multiplicity(
+int main_multiplicity(
 	int a, 
 	int b)
 {
@@ -50,14 +52,6 @@ int principle_multiplicity(
 	if (a == 3 && b == 2) return 2;
 	if (a == 2 && b == 2) return 2;
 	return -1;
-}
-
-double compare(
-	double a, 
-	double b)
-{
-	// discontinuous version
-	return (a > b);
 }
 
 /* 
@@ -91,27 +85,33 @@ void input()
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		// angle representation
-		string s;
-		getline(quantum_mechanics_file, s);
-		while(s[0] != '|') s.erase(0, 1);
-		s.erase(0, 1);
-		while(s[0] == ' ') s.erase(0, 1);
-
+		vector<string> s(4);
+		for (int j = 0; j < 6; j++)
+		{
+			quantum_mechanics_file >> dummy;
+		}
+		quantum_mechanics_file >> s[0] >> s[1] >> s[2] >> s[3];
+		getline(quantum_mechanics_file, dummy);
+		string 
+			t1 = s[0] + ' ' + s[1] + ' ' + s[2] + ' ' + s[3],
+			t2 = s[3] + ' ' + s[2] + ' ' + s[1] + ' ' + s[0];
 		
 		// get id of the angle
-		if (angles_id_dict.find(s) != angles_id_dict.end())
+		if (angles_id_dict.find(t1) != angles_id_dict.end())
 		{
-			angles_id[i] = angles_id_dict[s];
+			angles_id[i] = angles_id_dict[t1];
+		}
+		else if (angles_id_dict.find(t2) != angles_id_dict.end())
+		{
+			angles_id[i] = angles_id_dict[t2];
 		}
 		else
 		{
-			string t = s;
-			reverse(t.begin(), t.end());
-			angles_id_dict[s] = number_of_distinct_angles;
-			angles_id_dict[t] = number_of_distinct_angles++;
-			angles_id[i] = angles_id_dict[s];
+			angles_id_dict[t1] = number_of_distinct_angles;
+			angles_id_dict[t2] = number_of_distinct_angles;
+			angles_id[i] = number_of_distinct_angles;
+			number_of_distinct_angles++;
 		}
-		
 	}
 
 	// read actual data
@@ -129,68 +129,51 @@ void input()
 
 void correlation_preparation()
 {
-	pearson_rank.resize(number_of_angles * (number_of_terms - 1));
-	interact_mag.resize(number_of_angles * (number_of_terms - 1));
-	vector<double> temp(number_of_angles * (number_of_terms - 1));
-	int cnt = 0;
+	pearson_interact_vs_angles.resize(number_of_angles);
 	for (int i = 0; i < number_of_angles; i++)
 	{
-		double sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
-		// preparing 2 sequences of interaction and cos(multiplicity * angle)
+		pearson_interact_vs_angles[i].resize(number_of_terms);
 		vector<double> a(number_of_data_points);
+		double 
+			sumA = 0, 
+			sumB = 0, 
+			sumAB = 0, 
+			sumA2 = 0, 
+			sumB2 = 0, 
+			max_a = numeric_limits<double>::min(), 
+			min_a = numeric_limits<double>::max(), 
+			delta;
 		for (int j = 0; j < number_of_data_points; j++)
 		{
 			a[j] = interaction[j][i];
 			sumA += a[j];
 			sumA2 += a[j] * a[j];
+			min_a = min(min_a, a[j]);
+			max_a = max(max_a, a[j]);
 		}
+		delta = max_a - min_a;
+		// 2 sequences of interaction and cos(multiplicity * angle)
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			sumB = 0, sumB2 = 0, sumAB = 0;
+			for (int k = 0; k < number_of_data_points; k++)
 			{
-				sumB = 0, sumB2 = 0, sumAB = 0;
-				for (int k = 0; k < number_of_data_points; k++)
-				{
-					double b = cos(multiplicities[j] * angles[k][i] * M_PI / 180.0);
-					sumB += b;
-					sumB2 += b * b;
-					sumAB += a[k] * b;
-				}
+				double b = cos(multiplicities[j] * angles[k][i] * M_PI / 180.0);
+				sumB += b;
+				sumB2 += b * b;
+				sumAB += a[k] * b;
+			}
 
-				temp[cnt++] = 
-				abs(number_of_data_points * sumAB - sumA * sumB) / 
+			double p = 
+				(number_of_data_points * sumAB - sumA * sumB) / 
 				sqrt(
 					(number_of_data_points * sumA2 - sumA * sumA) * 
 					(number_of_data_points * sumB2 - sumB * sumB)
 				);
-			}
-		}
-	}
-	for (int i = 0; i < cnt; i++)
-	{
-		pearson_rank[i] = 1;
-		for (int j = 0; j < cnt; j++)
-		{
-			pearson_rank[i] += compare(temp[i], temp[j]);
-		}
-	}
+			
+			pearson_interact_vs_angles[i][j] = delta * p;
 
-	for (int i = 0; i < number_of_angles; i++)
-	{
-		double max_a = numeric_limits<double>::min(), min_a = numeric_limits<double>::max(), delta;
-		for (int j = 0; j < number_of_data_points; j++)
-		{
-			min_a = min(min_a, interaction[j][i]);
-			max_a = max(max_a, interaction[j][i]);
-		}
-		delta = max_a - min_a;
-		cnt = 0;
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
-			{
-				interact_mag[cnt++] = delta;
-			}
+			log_file << "Int " << i << ' ' << multiplicities[j] << ": " << delta << ' ' << p << ' ' << pearson_interact_vs_angles[i][j] << '\n';
 		}
 	}
 }
@@ -224,84 +207,111 @@ double rmse(
 double interaction_correlation(
 	vector<double>& set_of_force_constants)
 {
-	// rank force constants
-	int cnt = 0;
-	vector<double> 
-		temp(number_of_angles * (number_of_terms - 1)), 
-		rank(number_of_angles * (number_of_terms - 1));
+	double 
+		sumA = 0, 
+		sumB = 0, 
+		sumAB = 0, 
+		sumA2 = 0, 
+		sumB2 = 0;
+	int cnt = number_of_angles * (number_of_terms - 1) + 1;
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
+			double s = set_of_force_constants[number_of_terms * i + j];
+			s *= abs(s);
+			sumA += s;
+			sumA2 += s * s;
+			sumB += pearson_interact_vs_angles[i][j];
+			sumB2 += pearson_interact_vs_angles[i][j] * pearson_interact_vs_angles[i][j];
+			sumAB += s * pearson_interact_vs_angles[i][j];
+		}
+	}
+	if ((cnt * sumA2 - sumA * sumA) == 0 && (cnt * sumB2 - sumB * sumB) == 0) return 1;
+	if ((cnt * sumA2 - sumA * sumA) == 0 || (cnt * sumB2 - sumB * sumB) == 0) return 0;
+	return (1 -
+				(cnt * sumAB - sumA * sumB) / 
+				sqrt(
+					(cnt * sumA2 - sumA * sumA) * 
+					(cnt * sumB2 - sumB * sumB)
+				)
+			)/2;
+}
+/* 
+--------------------------------------------------------------------------------------
+Simplicity-accuracy trading functions
+ */
+double cubical(double x)
+{
+    return -2 * x * x * x + 3 * x * x;
+}
+
+double non_analytic_smooth_function(double x)
+{
+    return x > 0 ? exp(-1/x) : 0.0;
+}
+
+double smooth_transition_function(double x)
+{
+    return 
+		non_analytic_smooth_function(x) / 
+		(
+			non_analytic_smooth_function(x) + 
+			non_analytic_smooth_function(1 - x)
+		);
+}
+
+double coefficient(
+    double t, 
+    double cutoff)
+{
+    double 
+        border_width = 1e-2, 
+        center = cutoff + border_width;
+    if (abs(t) >= center) return 1;
+    else if (abs(t) <= cutoff) return 0;
+    //else return (1.0 - cos(M_PI / border_width * (abs(t) - cutoff)))/2.0;
+    else return cubical((abs(t) - cutoff)/border_width);
+    //else return (abs(t) - cutoff)/border_width;
+    //else return smooth_transition_function((abs(t) - cutoff) / border_width);
+    //return 0.9999;
+}
+
+double rmse_with_cutoff_and_simplicity_accuracy_trading(
+    vector<double>& set_of_force_constants,
+	double cutoff = 0.0)
+{
+    double sum_of_square_error = 0;
+	for (int i = 0; i < number_of_data_points; i++)
+	{
+		double error = energy[i] - set_of_force_constants[set_of_force_constants.size()-1];
+		for (int j = 0; j < number_of_angles; j++)
+		{
+			double angle = angles[i][j];
+			for (int k = 0; k < number_of_terms; k++)
 			{
-				temp[cnt++] = set_of_force_constants[number_of_terms * i + j];
+				error -= 
+					set_of_force_constants[j * number_of_terms + k] * 
+					cos(multiplicities[k] * angle / 180.0 * M_PI);
 			}
 		}
+		sum_of_square_error += error * error;
 	}
-	for (int i = 0; i < cnt; i++)
+    sum_of_square_error = sqrt(sum_of_square_error/number_of_data_points);
+	for (int i = 0; i < number_of_angles; i++)
 	{
-		rank[i] = 1;
-		for (int j = 0; j < cnt; j++)
+		for (int j = 0; j < number_of_terms; j++)
 		{
-			rank[i] += compare(temp[i], temp[j]);
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
+			sum_of_square_error += 
+				simplicity_accuracy_trading[j] * 
+				coefficient(
+					set_of_force_constants[i * number_of_terms + j], 
+					cutoff);
 		}
 	}
-	// calculate Spearman's rank correlation coefficient
-	double sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0, spearman_coeff, pearson_coeff;
-	for (int i = 0; i < cnt; i++)
-	{
-		sumA += pearson_rank[i];
-		sumB += rank[i];
-		sumAB += pearson_rank[i] * rank[i];
-		sumA2 += pearson_rank[i] * pearson_rank[i];
-		sumB2 += rank[i] * rank[i];
-	}
-	if ((cnt * sumA2 - sumA * sumA) <= 0 && (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		spearman_coeff = 0;
-	}
-	else if ((cnt * sumA2 - sumA * sumA) <= 0 || (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		spearman_coeff = 1;
-	}
-	else{
-		spearman_coeff = 
-			(1 - 
-			abs(cnt * sumAB - sumA * sumB) / 
-			sqrt(
-				(cnt * sumA2 - sumA * sumA) * 
-				(cnt * sumB2 - sumB * sumB)
-			));
-	}
-	// calculate Pearson's correlation coefficient
-	sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
-	for (int i = 0; i < cnt; i++)
-	{
-		sumA += interact_mag[i];
-		sumB += temp[i];
-		sumAB += interact_mag[i] * temp[i];
-		sumA2 += interact_mag[i] * interact_mag[i];
-		sumB2 += temp[i] * temp[i];
-	}
-	if ((cnt * sumA2 - sumA * sumA) <= 0 && (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		pearson_coeff = 0;
-	}
-	else if ((cnt * sumA2 - sumA * sumA) <= 0 || (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		pearson_coeff = 1;
-	}
-	else{
-		pearson_coeff = 
-			(1 - 
-			abs(cnt * sumAB - sumA * sumB) / 
-			sqrt(
-				(cnt * sumA2 - sumA * sumA) * 
-				(cnt * sumB2 - sumB * sumB)
-			));
-	}
-	return sqrt(spearman_coeff * pearson_coeff);
+    return sum_of_square_error;
 }
 
 double objective_function(
@@ -311,15 +321,58 @@ double objective_function(
 	vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 	set_of_force_constants[set_of_force_constants.size() - 1] = 
 	set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
+	double result = 0, sum = 0;
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
 			set_of_force_constants[number_of_terms * i + j] = 
 			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
+
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			{
+				set_of_force_constants[number_of_terms * i + j] = abs(set_of_force_constants[number_of_terms * i + j]);
+			}
 		}
 	}
-	return rmse(set_of_force_constants);// + interaction_correlation(set_of_force_constants);
+	//*
+	double r = rmse(set_of_force_constants);
+	//result += rmse_with_cutoff_and_simplicity_accuracy_trading(set_of_force_constants);
+	result += rmse(set_of_force_constants);
+	//*/
+	//*
+	sum = 0;
+	for (int i = 0; i < number_of_angles; i++)
+	{
+		for (int j = 0; j < i; j++)
+		{
+			double d = set_of_force_constants[i * number_of_terms + 2] - set_of_force_constants[j * number_of_terms + 2];
+			sum += d * d;
+		}
+	}
+	result += exp(-r) * sqrt(sum/(number_of_angles * (number_of_angles - 1)/2));
+	//*/
+
+	// restrain magnitudes of force constants
+	/*
+	sum = 0;
+	int no_of_dist_angles = 
+		(set_of_force_constants_reduced.size() - 1)/number_of_terms;
+	for (int i = 0; i < no_of_dist_angles; i++)
+	{
+		for (int j = 0; j < number_of_terms; j++)
+		{
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
+			sum += 
+				set_of_force_constants_reduced[i * number_of_terms + j] * 
+				set_of_force_constants_reduced[i * number_of_terms + j] / 
+				multiplicities[j];
+		}
+	}
+	result += sqrt(sum/(no_of_dist_angles * (number_of_terms - 1)));
+	//*/
+	result += interaction_correlation(set_of_force_constants);
+	return result;
 }
 
 double test_function(
@@ -336,13 +389,18 @@ double test_function(
 		{
 			set_of_force_constants[number_of_terms * i + j] = 
 			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
+
+			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+			{
+				set_of_force_constants[number_of_terms * i + j] = abs(set_of_force_constants[number_of_terms * i + j]);
+			}
 		}
 	}
 	double sum_of_square_error = 0;
 	for (int i = 0; i < number_of_data_points; i++)
 	{
 		double error = energy[i] - set_of_force_constants[set_of_force_constants.size()-1];
-		log_file << energy[i] << ' ' << error << '\n';
+		//log_file << energy[i] << ' ' << error << '\n';
 		for (int j = 0; j < number_of_angles; j++)
 		{
 			double angle = angles[i][j];
@@ -352,7 +410,7 @@ double test_function(
 				set_of_force_constants[j * number_of_terms + k] * 
 				cos(multiplicities[k] * angle / 180.0 * M_PI);
 				
-				//*
+				/*
 				log_file << "Minus contribution of mult " << multiplicities[k] << ", angle " << j << ": " << 
 				set_of_force_constants[j * number_of_terms + k] << " x " << 
 				cos(multiplicities[k] * angle / 180.0 * M_PI) << " = " << 
@@ -362,99 +420,18 @@ double test_function(
 			}
 		}
 		sum_of_square_error += error * error;
-		log_file << "ADD: " << error << '\n';
+		//log_file << "ADD: " << error << '\n';
 	}
 	result += sqrt(sum_of_square_error/number_of_data_points);
-	/*
-	int cnt = 0;
-	vector<double> 
-		temp(number_of_angles * (number_of_terms - 1)), 
-		rank(number_of_angles * (number_of_terms - 1));
-	for (int i = 0; i < number_of_angles; i++)
-	{
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			if (multiplicities[j] != principle_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
-			{
-				temp[cnt++] = set_of_force_constants[number_of_terms * i + j];
-			}
-		}
-	}
-	for (int i = 0; i < cnt; i++)
-	{
-		rank[i] = 1;
-		for (int j = 0; j < cnt; j++)
-		{
-			rank[i] += compare(temp[i], temp[j]);
-		}
-	}
-	// calculate Spearman's rank correlation coefficient
-	double sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0, spearman_coeff, pearson_coeff;
-	for (int i = 0; i < cnt; i++)
-	{
-		sumA += pearson_rank[i];
-		sumB += rank[i];
-		sumAB += pearson_rank[i] * rank[i];
-		sumA2 += pearson_rank[i] * pearson_rank[i];
-		sumB2 += rank[i] * rank[i];
-	}
-	if ((cnt * sumA2 - sumA * sumA) <= 0 && (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		spearman_coeff = 0;
-	}
-	else if ((cnt * sumA2 - sumA * sumA) <= 0 || (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		spearman_coeff = 1;
-	}
-	else{
-		spearman_coeff = 
-			(1 - 
-			abs(cnt * sumAB - sumA * sumB) / 
-			sqrt(
-				(cnt * sumA2 - sumA * sumA) * 
-				(cnt * sumB2 - sumB * sumB)
-			));
-	}
-	// calculate Pearson's correlation coefficient
-	sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
-	for (int i = 0; i < cnt; i++)
-	{
-		sumA += interact_mag[i];
-		sumB += temp[i];
-		sumAB += interact_mag[i] * temp[i];
-		sumA2 += interact_mag[i] * interact_mag[i];
-		sumB2 += temp[i] * temp[i];
-	}
-	if ((cnt * sumA2 - sumA * sumA) <= 0 && (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		pearson_coeff = 0;
-	}
-	else if ((cnt * sumA2 - sumA * sumA) <= 0 || (cnt * sumB2 - sumB * sumB) <= 0)
-	{
-		pearson_coeff = 1;
-	}
-	else{
-		pearson_coeff = 
-			(1 - 
-			abs(cnt * sumAB - sumA * sumB) / 
-			sqrt(
-				(cnt * sumA2 - sumA * sumA) * 
-				(cnt * sumB2 - sumB * sumB)
-			));
-	}
-	log_file << "Correlation: " << sqrt(spearman_coeff * pearson_coeff) << '\n';
-	result += sqrt(spearman_coeff * pearson_coeff);
-	//*/
 	return result;
 }
-
 
 int main()
 {
 	log_file.open("log.txt");
-
+	cerr << "START\n";
 	input();
-	//correlation_preparation();
+	correlation_preparation();
 	int trial = 2;
 	double sum_error = 0;
 	auto t1 = chrono::high_resolution_clock::now();
