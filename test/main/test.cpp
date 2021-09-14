@@ -3,12 +3,12 @@
 
 using namespace std;
 
-#include "src/ExtremaFinding/GlobalMinimumFinder.h"
+#include "../../src/ExtremaFinding/GlobalMinimumFinder.h"
 
 const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
-string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
+string quantum_mechanic_data = "../../butane_dihe_c2_c3.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36, 
@@ -334,12 +334,19 @@ double simplicity_vs_accuracy(
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (multiplicities[j] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2)) continue;
-			error += 
+			if (
+				multiplicities[j] == 
+				main_multiplicity(
+					nbrs_of_central_atom_1, 
+					nbrs_of_central_atom_2)
+				)
+			{
+				error += 
 				simplicity_accuracy_trading[j] * 
 				coefficient(
 					set_of_force_constants[i * number_of_terms + j], 
 					cutoff);
+			}
 		}
 	}
     return error;

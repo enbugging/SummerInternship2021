@@ -3,8 +3,8 @@
 
 using namespace std;
 
-#include "src/ExtremaFinding/GlobalMinimumFinder.h"
-#include "src/ExtremaFinding/ForceConstantFinder.h"
+#include "../../src/ExtremaFinding/GlobalMinimumFinder.h"
+#include "../../src/ExtremaFinding/ForceConstantFinder.h"
 
 #define random_step(rng,min,max) min + (double)rng() / UINT_MAX * (max - min)
 normal_distribution<double> gaussian (0.0,1.0);
@@ -344,7 +344,7 @@ int main()
         // grading
         result += summary2();
     }
-    printf("Test 2 - Simplicity-accuracy tradding. Correct: %d/%d", result, number_of_tests);
+    printf("Test 2 - Simplicity-accuracy trading. Correct: %d/%d", result, number_of_tests);
 }
 
 
