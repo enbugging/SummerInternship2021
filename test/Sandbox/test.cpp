@@ -206,6 +206,34 @@ double rmse(
 	return sqrt(sum_of_square_error/number_of_data_points);
 }
 
+double variance_of_main_multiplicity(
+	vector<double>& set_of_force_constants)
+{
+	double sum = 0;
+	int idx_main_mult = -1;
+	for (int i = 0; i < number_of_terms; i++)
+	{
+		if (multiplicities[i] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
+		{
+			idx_main_mult = i;
+			break;
+		}
+	}
+	if (idx_main_mult != -1)
+	{
+		for (int i = 0; i < number_of_angles; i++)
+		{
+			for (int j = 0; j < i; j++)
+			{
+				double d = 
+					set_of_force_constants[i * number_of_terms + idx_main_mult] - 
+					set_of_force_constants[j * number_of_terms + idx_main_mult];
+				sum += d * d;
+			}
+		}
+	}
+	return sqrt(sum/(number_of_angles * (number_of_angles - 1)/2));
+}
 /* 
 --------------------------------------------------------------------------------------
 Simplicity-accuracy trading functions
@@ -320,7 +348,9 @@ double objective_function(
 	}
 	//*
 	double r = rmse(set_of_force_constants);
-	result += r, r = 0;
+	result += r;
+	result += exp(-r) * variance_of_main_multiplicity(set_of_force_constants);
+	r = 0;
 
 	for (int i = 0; i < number_of_angles; i++)
 	{
@@ -358,29 +388,41 @@ int main()
 	for (int i = 1; i <= trial; i++)
 	{
 		cerr << "1\n";
-		vector<double> main_force_constants = simulated_annealing(pre_objective_function, number_of_angles + 1, 1.0);
+		vector<double> main_force_constants = simulated_annealing(pre_objective_function, number_of_angles + 1, 1.0, 100000);
 		vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 		set_of_force_constants[set_of_force_constants.size() - 1] = 
 		main_force_constants[main_force_constants.size() - 1];
-		for (int i = 0; i < number_of_angles; i++)
+		for (int j = 0; j < number_of_angles; j++)
 		{
-			for (int j = 0; j < number_of_terms; j++)
+			for (int k = 0; k < number_of_terms; k++)
 			{
-				if (multiplicities[j] == 
+				if (multiplicities[k] == 
 					main_multiplicity(
 						nbrs_of_central_atom_1, 
 						nbrs_of_central_atom_2)
 					)
 				{	
-					set_of_force_constants[number_of_terms * i + j] = 
-					main_force_constants[i];
+					set_of_force_constants[number_of_terms * j + k] = 
+					main_force_constants[j];
+					//cerr << "Main force constant " << j << ": " << main_force_constants[j] << '\n';
 				}
 			}
 		}
 		epsilon_main = rmse(set_of_force_constants);
+		//cerr << epsilon_main << '\n';
 		
 		cerr << "2\n";
-		w_total = 1.0/(epsilon_main + epsilon_0);
+		//w_total = 1.0/(epsilon_main + epsilon_0);
+		
+		double sum_of_energy_square = 0;
+		for (int j = 0; j < number_of_data_points; j++)
+		{
+			sum_of_energy_square += energy[j] * energy[j];
+		}
+		w_total = (epsilon_main)/sqrt(sum_of_energy_square);
+		
+		
+		
 		weights.resize(number_of_angles);
 		double sum_of_weights = 0;
 		for (int j = 0; j < number_of_angles; j++)
@@ -413,12 +455,12 @@ int main()
 		//vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 		set_of_force_constants[set_of_force_constants.size() - 1] = 
 		set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
-		for (int i = 0; i < number_of_angles; i++)
+		for (int j = 0; j < number_of_angles; j++)
 		{
-			for (int j = 0; j < number_of_terms; j++)
+			for (int k = 0; k < number_of_terms; k++)
 			{
-				set_of_force_constants[number_of_terms * i + j] = 
-				set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
+				set_of_force_constants[number_of_terms * j + k] = 
+				set_of_force_constants_reduced[number_of_terms * angles_id[j] + k];
 			}
 		}
 		
@@ -433,12 +475,12 @@ int main()
 		log_file << "Error: " 
 				<< error << '\n';
 		log_file << "Offset constant: " << set_of_force_constants[set_of_force_constants.size() - 1] << '\n';
-		for (int k = 0; k < number_of_angles; k++)
+		for (int j = 0; j < number_of_angles; j++)
 		{
-			log_file << "Force constants of angle " << k << ": ";
-			for (int j = 0; j < number_of_terms; j++)
+			log_file << "Force constants of angle " << j << ": ";
+			for (int k = 0; k < number_of_terms; k++)
 			{
-				log_file << set_of_force_constants[k * number_of_terms + j] << " ";
+				log_file << set_of_force_constants[j * number_of_terms + k] << " ";
 			}
 			log_file << '\n';
 		}
@@ -446,31 +488,31 @@ int main()
 		/*
 		cerr << "7\n";
 		error = 0;
-		for (int k = 0; k < number_of_angles; k++)
+		for (int j = 0; j < number_of_angles; j++)
 		{
-			for (int j = 0; j < number_of_terms; j++)
+			for (int k = 0; k < number_of_terms; k++)
 			{
-				if (multiplicities[j] != 
+				if (multiplicities[k] != 
 					main_multiplicity(
 						nbrs_of_central_atom_1, 
 						nbrs_of_central_atom_2)
 					)
 				{
 					error += 
-					weights[i][j]
-					* set_of_force_constants[number_of_terms * k + j] 
-					* set_of_force_constants[number_of_terms * k + j];
+					weights[j][k]
+					* set_of_force_constants[number_of_terms * j + k] 
+					* set_of_force_constants[number_of_terms * j + k];
 					log_file 
 					<< "Supp of angle " 
-					<< i 
-					<< " and term " 
 					<< j 
+					<< " and term " 
+					<< k 
 					<< ": "
-					<< weights[i][j]
+					<< weights[j][k]
 					<< ' '
-					<< weights[i][j]
-					* set_of_force_constants[number_of_terms * k + j] 
-					* set_of_force_constants[number_of_terms * k + j]
+					<< weights[j][k]
+					* set_of_force_constants[number_of_terms * j + k] 
+					* set_of_force_constants[number_of_terms * j + k]
 					<< '\n';
 				}
 			}

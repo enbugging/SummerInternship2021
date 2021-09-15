@@ -8,7 +8,7 @@ using namespace std;
 const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
-string quantum_mechanic_data = "../../butane_dihe_c2_c3.dat";
+string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36, 
@@ -371,7 +371,7 @@ double objective_function(
 	//*
 	double r = rmse(set_of_force_constants);
 	result += r;
-	result += simplicity_vs_accuracy(set_of_force_constants);
+	//result += simplicity_vs_accuracy(set_of_force_constants);
 	result += exp(-r) * variance_of_main_multiplicity(set_of_force_constants);
 	//result += magnitude_of_force_constants(set_of_force_constants_reduced);
 	result += interaction_correlation(set_of_force_constants);
