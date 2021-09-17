@@ -7,6 +7,7 @@ using namespace std;
 #include "../numerical_recipes/nr.h" // numerical recipes
 #endif
 
+#include "ForceConstantFinder.h"
 
 double optimal_force_constant(
     vector<double>& angles, 
@@ -25,7 +26,7 @@ vector<double> find_with_simplicity_accuracy_trading(
     vector<double>& angles,
     vector<double>& quantum_mechanics_points, 
     int number_of_terms, 
-    double cutoff = 0)
+    double cutoff)
 {
     // initialization
     int multiplicities[6] = {0, 1, 2, 3, 4, 6};

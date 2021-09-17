@@ -4,6 +4,8 @@
 using namespace std;
 
 #include "../../src/ExtremaFinding/GlobalMinimumFinder.h"
+#include "../../src/ObjectiveFunctions/ObjectiveFunctions.h"
+#include "../../src/SimplicityAccuracy/SimplicityAccuracy.h"
 
 const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
@@ -15,10 +17,10 @@ int
 	number_of_distinct_angles, 
 	nbrs_of_central_atom_1,
 	nbrs_of_central_atom_2, 
+	main_mult, 
 	angles_id[number_of_angles], 
 	multiplicities[5] = {1, 2, 3, 4, 6};
-double 
-    simplicity_accuracy_trading[5] = {0.01, 0.015, 0.02, 0.025, 0.035}, 
+double
 	epsilon_main, // error by optimization of principle force constants only, named by Prof. Alexandrov
 	epsilon_0 = 0.001, 
 	w_total;
@@ -82,6 +84,10 @@ void input()
 	// read number of neighbors
 	getline(quantum_mechanics_file, dummy);
 	quantum_mechanics_file >> nbrs_of_central_atom_1 >> nbrs_of_central_atom_2;
+	main_mult = 
+		main_multiplicity(
+			nbrs_of_central_atom_1, 
+			nbrs_of_central_atom_2);
 	getline(quantum_mechanics_file, dummy);
 	
 	// read angle descrition
@@ -180,152 +186,6 @@ void correlation_preparation()
 	}
 }
 
-/* 
---------------------------------------------------------------------------------------
-Objective functions
- */
-double rmse(
-	vector<double>& set_of_force_constants)
-{
-	double sum_of_square_error = 0;
-	for (int i = 0; i < number_of_data_points; i++)
-	{
-		double error = energy[i] - set_of_force_constants[set_of_force_constants.size()-1];
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			double angle = angles[i][j];
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				error -= 
-				set_of_force_constants[j * number_of_terms + k] * 
-				cos(multiplicities[k] * angle / 180.0 * M_PI);
-			}
-		}
-		sum_of_square_error += error * error;
-	}
-	return sqrt(sum_of_square_error/number_of_data_points);
-}
-
-double soft_sign(
-	double x)
-{
-	double epsilon = 1e-4;
-	if(abs(x) >= epsilon)
-	{
-		return (x > 0 ? 1 : -1);
-	}
-	else
-	{
-		return x/epsilon;
-	}
-}
-
-double sign_of_main_multiplicity(
-	vector<double>& set_of_force_constants)
-{
-	double res = 0;
-	int idx_main_mult = -1;
-	for (int i = 0; i < number_of_terms; i++)
-	{
-		if (multiplicities[i] == main_multiplicity(nbrs_of_central_atom_1, nbrs_of_central_atom_2))
-		{
-			idx_main_mult = i;
-			break;
-		}
-	}
-	if (idx_main_mult != -1)
-	{
-		for (int i = 0; i < number_of_angles; i++)
-		{
-			for (int j = 0; j < i; j++)
-			{
-				double d = 
-					soft_sign(
-						set_of_force_constants[
-							i * number_of_terms + 
-							idx_main_mult]
-						) - 
-					soft_sign(
-						set_of_force_constants[
-							j * number_of_terms + 
-							idx_main_mult]
-						);
-				res = max(res, abs(d));
-			}
-		}
-	}
-	return res;
-}
-
-/* 
---------------------------------------------------------------------------------------
-Simplicity-accuracy trading functions
- */
-double cubical(double x)
-{
-    return -2 * x * x * x + 3 * x * x;
-}
-
-double non_analytic_smooth_function(double x)
-{
-    return x > 0 ? exp(-1/x) : 0.0;
-}
-
-double smooth_transition_function(double x)
-{
-    return 
-		non_analytic_smooth_function(x) / 
-		(
-			non_analytic_smooth_function(x) + 
-			non_analytic_smooth_function(1 - x)
-		);
-}
-
-double coefficient(
-    double t, 
-    double cutoff)
-{
-    double 
-        border_width = 1e-2, 
-        center = cutoff + border_width;
-    if (abs(t) >= center) return 1;
-    else if (abs(t) <= cutoff) return 0;
-    //else return (1.0 - cos(M_PI / border_width * (abs(t) - cutoff)))/2.0;
-    else return cubical((abs(t) - cutoff)/border_width);
-    //else return (abs(t) - cutoff)/border_width;
-    //else return smooth_transition_function((abs(t) - cutoff) / border_width);
-    //return 0.9999;
-}
-
-double simplicity_vs_accuracy(
-    vector<double>& set_of_force_constants,
-	double cutoff = 0.0)
-{
-    double error = 0;
-	for (int i = 0; i < number_of_angles; i++)
-	{
-		for (int j = 0; j < number_of_terms; j++)
-		{
-			if (
-				multiplicities[j] == 
-				main_multiplicity(
-					nbrs_of_central_atom_1, 
-					nbrs_of_central_atom_2)
-				)
-			{
-				error += 
-				simplicity_accuracy_trading[j] * 
-				coefficient(
-					set_of_force_constants[i * number_of_terms + j], 
-					cutoff);
-			}
-		}
-	}
-    return error;
-}
-//--------------------------------------------------------------------------------------
-
-
 double pre_objective_function(
 	vector<double>& main_force_constants)
 {
@@ -337,20 +197,29 @@ double pre_objective_function(
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (multiplicities[j] == 
-				main_multiplicity(
-					nbrs_of_central_atom_1, 
-					nbrs_of_central_atom_2)
-				)
+			if (multiplicities[j] == main_mult)
 			{	
 				set_of_force_constants[number_of_terms * i + j] = 
 				main_force_constants[i];
 			}
 		}
 	}
-	double r = rmse(set_of_force_constants);
+	double r = rmse(
+		set_of_force_constants, 
+		energy, 
+		angles, 
+		multiplicities, 
+		number_of_data_points, 
+		number_of_angles, 
+		number_of_terms);
 	result += r;
-	result += 1000 * exp(-r) * sign_of_main_multiplicity(set_of_force_constants);
+	result += 1000 * exp(-r) * 
+		sign_of_main_multiplicity(
+			set_of_force_constants, 
+			multiplicities, 
+			number_of_angles,
+			number_of_terms,
+			main_mult);
 	return result;
 }
 
@@ -371,20 +240,28 @@ double objective_function(
 		}
 	}
 	//*
-	double r = rmse(set_of_force_constants);
+	double r = rmse(
+		set_of_force_constants, 
+		energy, 
+		angles, 
+		multiplicities, 
+		number_of_data_points, 
+		number_of_angles, 
+		number_of_terms);
 	result += r;
-	result += 1000 * exp(-r) * sign_of_main_multiplicity(set_of_force_constants);
+	result += 1000 * exp(-r) * sign_of_main_multiplicity(
+			set_of_force_constants, 
+			multiplicities, 
+			number_of_angles,
+			number_of_terms,
+			main_mult);
 	r = 0;
 
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		for (int j = 0; j < number_of_terms; j++)
 		{
-			if (multiplicities[j] != 
-				main_multiplicity(
-					nbrs_of_central_atom_1, 
-					nbrs_of_central_atom_2)
-				)
+			if (multiplicities[j] != main_mult)
 			{
 				r += 
 				weights[i][j]
@@ -420,11 +297,7 @@ int main()
 		{
 			for (int k = 0; k < number_of_terms; k++)
 			{
-				if (multiplicities[k] == 
-					main_multiplicity(
-						nbrs_of_central_atom_1, 
-						nbrs_of_central_atom_2)
-					)
+				if (multiplicities[k] == main_mult)
 				{	
 					set_of_force_constants[number_of_terms * j + k] = 
 					main_force_constants[j];
@@ -432,8 +305,21 @@ int main()
 				}
 			}
 		}
-		epsilon_main = rmse(set_of_force_constants);
-		//cerr << sign_of_main_multiplicity(set_of_force_constants) << ' ' << epsilon_main << '\n';
+		epsilon_main = rmse(
+			set_of_force_constants, 
+			energy, 
+			angles, 
+			multiplicities, 
+			number_of_data_points, 
+			number_of_angles, 
+			number_of_terms);
+		//cerr << sign_of_main_multiplicity(
+		//	set_of_force_constants, 
+		//	multiplicities, 
+		//	number_of_angles,
+		//	number_of_terms,
+		//	main_mult) 
+		//	<< ' ' << epsilon_main << '\n';
 		
 		cerr << "2\n";
 		double sum_of_energy_square = 0;
@@ -485,7 +371,14 @@ int main()
 		}
 		
 		cerr << "5\n";
-		double error = rmse(set_of_force_constants);
+		double error = rmse(
+			set_of_force_constants, 
+			energy, 
+			angles, 
+			multiplicities, 
+			number_of_data_points, 
+			number_of_angles, 
+			number_of_terms);
 		sum_error += error;
 		prev_mean = current_mean;
 		current_mean = (prev_mean * (i - 1) + error)/i;
