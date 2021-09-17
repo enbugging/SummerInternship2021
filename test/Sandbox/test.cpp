@@ -206,10 +206,24 @@ double rmse(
 	return sqrt(sum_of_square_error/number_of_data_points);
 }
 
-double variance_of_main_multiplicity(
+double soft_sign(
+	double x)
+{
+	double epsilon = 1e-4;
+	if(abs(x) >= epsilon)
+	{
+		return (x > 0 ? 1 : -1);
+	}
+	else
+	{
+		return x/epsilon;
+	}
+}
+
+double sign_of_main_multiplicity(
 	vector<double>& set_of_force_constants)
 {
-	double sum = 0;
+	double res = 0;
 	int idx_main_mult = -1;
 	for (int i = 0; i < number_of_terms; i++)
 	{
@@ -226,14 +240,23 @@ double variance_of_main_multiplicity(
 			for (int j = 0; j < i; j++)
 			{
 				double d = 
-					set_of_force_constants[i * number_of_terms + idx_main_mult] - 
-					set_of_force_constants[j * number_of_terms + idx_main_mult];
-				sum += d * d;
+					soft_sign(
+						set_of_force_constants[
+							i * number_of_terms + 
+							idx_main_mult]
+						) - 
+					soft_sign(
+						set_of_force_constants[
+							j * number_of_terms + 
+							idx_main_mult]
+						);
+				res = max(res, abs(d));
 			}
 		}
 	}
-	return sqrt(sum/(number_of_angles * (number_of_angles - 1)/2));
+	return res;
 }
+
 /* 
 --------------------------------------------------------------------------------------
 Simplicity-accuracy trading functions
@@ -327,6 +350,7 @@ double pre_objective_function(
 	}
 	double r = rmse(set_of_force_constants);
 	result += r;
+	result += 1000 * exp(-r) * sign_of_main_multiplicity(set_of_force_constants);
 	return result;
 }
 
@@ -349,7 +373,7 @@ double objective_function(
 	//*
 	double r = rmse(set_of_force_constants);
 	result += r;
-	result += exp(-r) * variance_of_main_multiplicity(set_of_force_constants);
+	result += 1000 * exp(-r) * sign_of_main_multiplicity(set_of_force_constants);
 	r = 0;
 
 	for (int i = 0; i < number_of_angles; i++)
@@ -409,19 +433,15 @@ int main()
 			}
 		}
 		epsilon_main = rmse(set_of_force_constants);
-		//cerr << epsilon_main << '\n';
+		//cerr << sign_of_main_multiplicity(set_of_force_constants) << ' ' << epsilon_main << '\n';
 		
 		cerr << "2\n";
-		//w_total = 1.0/(epsilon_main + epsilon_0);
-		
 		double sum_of_energy_square = 0;
 		for (int j = 0; j < number_of_data_points; j++)
 		{
 			sum_of_energy_square += energy[j] * energy[j];
 		}
-		w_total = (epsilon_main)/sqrt(sum_of_energy_square);
-		
-		
+		w_total = sqrt(sum_of_energy_square)/(epsilon_main);
 		
 		weights.resize(number_of_angles);
 		double sum_of_weights = 0;
@@ -432,7 +452,7 @@ int main()
 			{
 				weights[j][k] = 
 					1.0 / (
-						(1.0 - pearson_interact_vs_angles[j][k]) / 2.0 
+						abs(pearson_interact_vs_angles[j][k])
 						* magnitude_of_interaction[j] 
 						+ epsilon_0);
 				sum_of_weights += weights[j][k];
