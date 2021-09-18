@@ -80,9 +80,16 @@ double sign_of_main_multiplicity(
 							j * number_of_terms + 
 							idx_main_mult]
 						);
-				res = max(res, abs(d));
+				d *= 
+				set_of_force_constants[
+							i * number_of_terms + 
+							idx_main_mult] -
+				set_of_force_constants[
+							j * number_of_terms + 
+							idx_main_mult];
+				res += d*d;
 			}
 		}
 	}
-	return res;
+	return sqrt(res);
 }

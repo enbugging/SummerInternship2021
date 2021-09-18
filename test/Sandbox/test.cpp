@@ -9,8 +9,8 @@ using namespace std;
 
 const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
-//string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
-string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
+string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
+//string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
 int
 	number_of_terms = 3,
 	number_of_data_points = 36, 
@@ -281,7 +281,7 @@ int main()
 	cerr << "START\n";
 	input();
 	correlation_preparation();
-	int trial = 2;
+	int trial = 20;
 	double sum_error = 0;
 	auto t1 = chrono::high_resolution_clock::now();
 	double prev_mean = 0, current_mean = 0, M = 0;
