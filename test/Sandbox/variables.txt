@@ -1,0 +1,60 @@
+Meaning of each variables:
+
+1. Global variables
+number_of_angles: the number of angles
+number_of_terms: the number of multiplicities considered.
+number_of_data_points: the number of data points
+number_of_distinct_angles: the number of angles of distinct types
+nbrs_of_central_atom_1: number of neighbors to the first atom
+nbrs_of_central_atom_2: number of neighbors to the second atom
+main_mult: main multiplicity, defined by the function main_multiplicity
+
+angles_id[]: the id of the angle in classification of different types, 
+            i.e. the id representing the type of angle 
+multiplicities[]: harmonics to be considered
+
+epsilon_main: error by optimization of principle force constants only
+epsilon_0 = 0.001: to avoid division by 0
+w_total: as defined in the scheme
+
+angles: vector of vectors representing angle. e.g. angles[i][j] represents 
+        angles at i-th line of j-th angle
+interaction: vector of vectors representing interaction energy of distant 
+        gourps. e.g. interaction[i][j] represents interaction energy at i-th 
+        line of j-th angle
+pearson_interact_vs_angles: pearson_interact_vs_angles[i][j] is the pearson
+        coefficient between (interaction[i]) and (cos(multiplicities[j] * angles[i][_]))
+weights: as defined in the scheme
+        weights[j][k] = 
+        1.0 / (
+            abs(pearson_interact_vs_angles[j][k])
+            * magnitude_of_interaction[j] 
+            + epsilon_0);
+
+energy: energy[i] is the energy at i-th line, representing dihedral energy of
+        the whole angle
+magnitude_of_interaction: 
+        magnitude_of_interaction[i] = max(interaction[i][j] - interaction[i][k])
+        for all j, k
+
+angles_id_dict: a dictionary mapping the string characterizing angle type to the id
+        of such angles.
+
+log_file: input file stream buffer
+
+2. Local variables
+
+quantum_mechanic_data: url to the data file 
+set_of_force_constants: the vector of the size number_of_terms * number_of_angles + 1
+        representing the parameters feeding to the subobjective functions to be optimized.
+        In particular, set_of_force_constants[number_of_terms * i + j] is the force
+        constant of j-th multiplicity of i-th angle; except the last element, which
+        represents the offset constant.
+set_of_force_constants_reduced: the vector of the size 
+        number_of_terms * number_of_distinct_angles + 1 representing the parameters 
+        feeding to the objective function to be optimized. In particular, 
+        set_of_force_constants[number_of_terms * i + j] = 
+			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
+        except the last element, which represents the offset constant. This is to effectively
+        enforce the equality of force constants between angles of the same types.
+main_mult: index of the main multiplicity in multiplicities[]

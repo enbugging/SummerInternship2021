@@ -9,7 +9,7 @@ using namespace std;
 
 const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
-string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
+//string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
 int
 	number_of_terms = 3,
@@ -64,7 +64,7 @@ int main_multiplicity(
 --------------------------------------------------------------------------------------
 Preprocess functions
  */
-void input()
+void input(string quantum_mechanic_data)
 {
 	// initialization
 	angles.resize(number_of_data_points);
@@ -162,6 +162,7 @@ void correlation_preparation()
 			max_a = max(max_a, a[j]);
 		}
 		magnitude_of_interaction[i] = max_a - min_a;
+		
 		// 2 sequences of interaction and cos(multiplicity * angle)
 		for (int j = 0; j < number_of_terms; j++)
 		{
@@ -213,8 +214,14 @@ double pre_objective_function(
 		number_of_angles, 
 		number_of_terms);
 	result += r;
-	result += 1000 * exp(-r) * 
-		sign_of_main_multiplicity(
+	result += 0.1 * 
+		magnitude_main_multiplicity(
+			set_of_force_constants, 
+			multiplicities, 
+			number_of_angles,
+			number_of_terms,
+			main_mult);
+	result += 1000 * exp(-r) * sign_of_main_multiplicity(
 			set_of_force_constants, 
 			multiplicities, 
 			number_of_angles,
@@ -239,7 +246,6 @@ double objective_function(
 			set_of_force_constants_reduced[number_of_terms * angles_id[i] + j];
 		}
 	}
-	//*
 	double r = rmse(
 		set_of_force_constants, 
 		energy, 
@@ -249,6 +255,12 @@ double objective_function(
 		number_of_angles, 
 		number_of_terms);
 	result += r;
+	result += 0.1 * magnitude_main_multiplicity(
+			set_of_force_constants, 
+			multiplicities, 
+			number_of_angles,
+			number_of_terms,
+			main_mult);
 	result += 1000 * exp(-r) * sign_of_main_multiplicity(
 			set_of_force_constants, 
 			multiplicities, 
@@ -275,20 +287,19 @@ double objective_function(
 	return result;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 	log_file.open("log.txt");
 	cerr << "START\n";
-	input();
+	input(argv[1]);
 	correlation_preparation();
-	int trial = 20;
+	int trial = 2;
 	double sum_error = 0;
 	auto t1 = chrono::high_resolution_clock::now();
 	double prev_mean = 0, current_mean = 0, M = 0;
-	//*/
 	for (int i = 1; i <= trial; i++)
 	{
-		cerr << "1\n";
+		//cerr << "1\n";
 		vector<double> main_force_constants = simulated_annealing(pre_objective_function, number_of_angles + 1, 1.0, 100000);
 		vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 		set_of_force_constants[set_of_force_constants.size() - 1] = 
@@ -313,15 +324,8 @@ int main()
 			number_of_data_points, 
 			number_of_angles, 
 			number_of_terms);
-		//cerr << sign_of_main_multiplicity(
-		//	set_of_force_constants, 
-		//	multiplicities, 
-		//	number_of_angles,
-		//	number_of_terms,
-		//	main_mult) 
-		//	<< ' ' << epsilon_main << '\n';
 		
-		cerr << "2\n";
+		//cerr << "2\n";
 		double sum_of_energy_square = 0;
 		for (int j = 0; j < number_of_data_points; j++)
 		{
@@ -353,12 +357,11 @@ int main()
 			}
 		}
 
-		cerr << "3\n";
+		//cerr << "3\n";
 		vector<double> set_of_force_constants_reduced = simulated_annealing(objective_function, number_of_distinct_angles * number_of_terms + 1, 1.0);
 		
-		cerr << "4\n";
+		//cerr << "4\n";
 		// expand the set of force constants
-		//vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
 		set_of_force_constants[set_of_force_constants.size() - 1] = 
 		set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
 		for (int j = 0; j < number_of_angles; j++)
@@ -370,7 +373,7 @@ int main()
 			}
 		}
 		
-		cerr << "5\n";
+		//cerr << "5\n";
 		double error = rmse(
 			set_of_force_constants, 
 			energy, 
@@ -384,7 +387,7 @@ int main()
 		current_mean = (prev_mean * (i - 1) + error)/i;
 		M += (error - current_mean) * (error - prev_mean);
 		
-		cerr << "6\n";
+		//cerr << "6\n";
 		log_file << "Error: " 
 				<< error << '\n';
 		log_file << "Offset constant: " << set_of_force_constants[set_of_force_constants.size() - 1] << '\n';
@@ -397,41 +400,6 @@ int main()
 			}
 			log_file << '\n';
 		}
-		
-		/*
-		cerr << "7\n";
-		error = 0;
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				if (multiplicities[k] != 
-					main_multiplicity(
-						nbrs_of_central_atom_1, 
-						nbrs_of_central_atom_2)
-					)
-				{
-					error += 
-					weights[j][k]
-					* set_of_force_constants[number_of_terms * j + k] 
-					* set_of_force_constants[number_of_terms * j + k];
-					log_file 
-					<< "Supp of angle " 
-					<< j 
-					<< " and term " 
-					<< k 
-					<< ": "
-					<< weights[j][k]
-					<< ' '
-					<< weights[j][k]
-					* set_of_force_constants[number_of_terms * j + k] 
-					* set_of_force_constants[number_of_terms * j + k]
-					<< '\n';
-				}
-			}
-		}
-		log_file << "Supp: " << w_total * sqrt(error) << '\n';
-		//*/
 	}
 	log_file << "Error average: " << sum_error/trial << '\n';
 	log_file << "Standard deviation: " << M/(trial-1) << '\n';

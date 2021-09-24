@@ -46,6 +46,43 @@ double soft_sign(
 	}
 }
 
+double magnitude_main_multiplicity(
+	vector<double>& set_of_force_constants, 
+    int multiplicities[], 
+    int number_of_angles, 
+    int number_of_terms, 
+    int main_mult)
+{
+	double res = 0;
+	int idx_main_mult = -1;
+	for (int i = 0; i < number_of_terms; i++)
+	{
+		if (multiplicities[i] == main_mult)
+		{
+			idx_main_mult = i;
+			break;
+		}
+	}
+	if (idx_main_mult != -1)
+	{
+		for (int i = 0; i < number_of_angles; i++)
+		{
+			for (int j = 0; j < i; j++)
+			{
+				double d = 
+					set_of_force_constants[
+							i * number_of_terms + 
+							idx_main_mult] - 
+					set_of_force_constants[
+							j * number_of_terms + 
+							idx_main_mult];
+				res += d*d;
+			}
+		}
+	}
+	return sqrt(res/(number_of_angles * (number_of_angles - 1) / 2));
+}
+
 double sign_of_main_multiplicity(
 	vector<double>& set_of_force_constants, 
     int multiplicities[], 
