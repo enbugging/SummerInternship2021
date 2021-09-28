@@ -1,0 +1,26 @@
+Error: 0.0167076
+Offset constant: 1.51857
+Force constants of angle 0: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 1: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 2: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 3: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 4: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 5: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 6: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 7: -4.00757e-22 4.92665e-22 0.166343 
+Force constants of angle 8: -4.00757e-22 4.92665e-22 0.166343 
+Error: 0.0167076
+Offset constant: 1.51857
+Force constants of angle 0: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 1: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 2: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 3: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 4: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 5: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 6: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 7: -2.43849e-16 -1.85642e-16 0.166343 
+Force constants of angle 8: -2.43849e-16 -1.85642e-16 0.166343 
+Error average: 0.0167076
+Standard deviation: 5.41668e-33
+95% confidence interval:7.50713e-33
+Total runtime: 115.285

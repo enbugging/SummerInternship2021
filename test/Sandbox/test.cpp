@@ -7,18 +7,18 @@ using namespace std;
 #include "../../src/ObjectiveFunctions/ObjectiveFunctions.h"
 #include "../../src/SimplicityAccuracy/SimplicityAccuracy.h"
 
-const int number_of_angles = 9;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
 int
+	number_of_angles, 
 	number_of_terms = 3,
 	number_of_data_points = 36, 
 	number_of_distinct_angles, 
 	nbrs_of_central_atom_1,
 	nbrs_of_central_atom_2, 
 	main_mult, 
-	angles_id[number_of_angles], 
+	angles_id[9], 
 	multiplicities[5] = {1, 2, 3, 4, 6};
 double
 	epsilon_main, // error by optimization of principle force constants only, named by Prof. Alexandrov
@@ -70,11 +70,6 @@ void input(string quantum_mechanic_data)
 	angles.resize(number_of_data_points);
 	interaction.resize(number_of_data_points);
 	energy.resize(number_of_data_points);
-	for (int i = 0; i < number_of_data_points; i++)
-	{
-		angles[i].resize(number_of_angles);
-		interaction[i].resize(number_of_angles);
-	}
 
 	// initialize input stream
 	ifstream quantum_mechanics_file;
@@ -91,6 +86,14 @@ void input(string quantum_mechanic_data)
 	getline(quantum_mechanics_file, dummy);
 	
 	// read angle descrition
+	for (int i = 0; i < 6; i++) quantum_mechanics_file >> dummy;
+	quantum_mechanics_file >> number_of_angles;u8
+	for (int i = 0; i < number_of_data_points; i++)
+	{
+		angles[i].resize(number_of_angles);
+		interaction[i].resize(number_of_angles);
+	}
+
 	getline(quantum_mechanics_file, dummy);
 	for (int i = 0; i < number_of_angles; i++)
 	{

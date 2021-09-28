@@ -45,6 +45,9 @@ log_file: input file stream buffer
 2. Local variables
 
 quantum_mechanic_data: url to the data file 
+
+main_force_constants: the vector of size number_of_angles, containing solely force constants
+        of main multiplicities, to be feed into first optimization.
 set_of_force_constants: the vector of the size number_of_terms * number_of_angles + 1
         representing the parameters feeding to the subobjective functions to be optimized.
         In particular, set_of_force_constants[number_of_terms * i + j] is the force
@@ -58,3 +61,15 @@ set_of_force_constants_reduced: the vector of the size
         except the last element, which represents the offset constant. This is to effectively
         enforce the equality of force constants between angles of the same types.
 main_mult: index of the main multiplicity in multiplicities[]
+
+trial: number of runs to be executed. Multiple runs are desirable to ensure stability of result.
+
+3. How to use
+Assuming one is in the directory ./Summer internship 2021
+1) run `sh test/Sandbox/test.sh`
+2) run `bin/Sandbox`, followed by the url pointint to data file. Ex: one has the file
+./Summer internship 2021/ethane_dihe_c1_c2.dat, then one runs
+`bin/Sandbox ethane_dihe_c1_c2.dat`
+3) The result will be printed into the file log.txt, containing the final RMSE error, force constants
+of each angles, corresponding to harmonics as defined in multiplicities[], the average, the standard
+deviation, and the 95%-confidence of the run. Also, for analysis purpose, runtime will also be printed.
