@@ -10,6 +10,7 @@ using namespace std;
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "butane_dihe_c2_c3.dat";
+const int MAX_LENGTH = 10;
 int
 	number_of_angles, 
 	number_of_terms = 3,
@@ -32,7 +33,10 @@ vector<vector<double> >
 vector<double> 
 	energy,
 	magnitude_of_interaction;
-map<string, int> angles_id_dict;
+map<string, int> 
+	angles_id_dict;
+map<int, string>
+	distinct_angles_represent;
 
 ofstream log_file;
 	
@@ -61,6 +65,18 @@ int main_multiplicity(
 }
 
 /* 
+Cheking if a string is a number
+ */
+bool isNumber(const string& str)
+{
+	if (str.length() == 0) return false;
+    for (char const &c : str) {
+        if (std::isdigit(c) == 0) return false;
+    }
+    return true;
+}
+
+/* 
 --------------------------------------------------------------------------------------
 Preprocess functions
  */
@@ -83,18 +99,26 @@ void input(string quantum_mechanic_data)
 		main_multiplicity(
 			nbrs_of_central_atom_1, 
 			nbrs_of_central_atom_2);
-	getline(quantum_mechanics_file, dummy);
 	
-	// read angle descrition
-	for (int i = 0; i < 6; i++) quantum_mechanics_file >> dummy;
-	quantum_mechanics_file >> number_of_angles;u8
+	// read number of angles
+	while(not isNumber(dummy))
+	{
+		quantum_mechanics_file >> dummy;
+	}
+	number_of_angles = 0;
+	for (int i = 0; i < (int) dummy.length(); i++)
+	{
+		number_of_angles *= 10;
+		number_of_angles += (dummy[i] - '0');
+	}
+	getline(quantum_mechanics_file, dummy);
 	for (int i = 0; i < number_of_data_points; i++)
 	{
 		angles[i].resize(number_of_angles);
 		interaction[i].resize(number_of_angles);
 	}
 
-	getline(quantum_mechanics_file, dummy);
+	// read angle descrition	
 	for (int i = 0; i < number_of_angles; i++)
 	{
 		// angle representation
@@ -123,6 +147,7 @@ void input(string quantum_mechanic_data)
 			angles_id_dict[t1] = number_of_distinct_angles;
 			angles_id_dict[t2] = number_of_distinct_angles;
 			angles_id[i] = number_of_distinct_angles;
+			distinct_angles_represent[number_of_distinct_angles] = t1;
 			number_of_distinct_angles++;
 		}
 	}
@@ -334,7 +359,7 @@ int main(int argc, char* argv[])
 		{
 			sum_of_energy_square += energy[j] * energy[j];
 		}
-		w_total = sqrt(sum_of_energy_square)/(epsilon_main);
+		w_total = 0.01 * sqrt(sum_of_energy_square)/(epsilon_main);
 		
 		weights.resize(number_of_angles);
 		double sum_of_weights = 0;
@@ -393,16 +418,56 @@ int main(int argc, char* argv[])
 		//cerr << "6\n";
 		log_file << "Error: " 
 				<< error << '\n';
-		log_file << "Offset constant: " << set_of_force_constants[set_of_force_constants.size() - 1] << '\n';
-		for (int j = 0; j < number_of_angles; j++)
+		log_file << "Offset constant: " << set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1] << '\n';
+		log_file << "Force constants of type:\n";
+		for (int j = 0; j < number_of_distinct_angles; j++)
 		{
-			log_file << "Force constants of angle " << j << ": ";
+			log_file << distinct_angles_represent[j] << ": ";
 			for (int k = 0; k < number_of_terms; k++)
 			{
-				log_file << set_of_force_constants[j * number_of_terms + k] << " ";
+				string out = to_string(set_of_force_constants_reduced[j * number_of_terms + k]);
+				for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
+				{
+					log_file << ' ';
+				}
+				log_file << out;
 			}
 			log_file << '\n';
 		}
+
+		//cerr << "7\n";
+		log_file << "Energy profile comparison\n";
+		log_file << " Reference|   Model|\n";
+
+		for (int i = 0; i < number_of_data_points; i++)
+		{
+			double energy_prediction = set_of_force_constants[set_of_force_constants.size()-1];
+			for (int j = 0; j < number_of_angles; j++)
+			{
+				double angle = angles[i][j];
+				for (int k = 0; k < number_of_terms; k++)
+				{
+					energy_prediction += 
+					set_of_force_constants[j * number_of_terms + k] * 
+					cos(multiplicities[k] * angle / 180.0 * M_PI);
+				}
+			}
+			string out = to_string(energy[i]);
+			for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
+			{
+				log_file << ' ';
+			}
+			log_file << out;
+
+			out = to_string(energy_prediction);
+			for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
+			{
+				log_file << ' ';
+			}
+			log_file << out << '\n';
+		}
+
+		log_file << "----------------------------------------------------\n";
 	}
 	log_file << "Error average: " << sum_error/trial << '\n';
 	log_file << "Standard deviation: " << M/(trial-1) << '\n';
