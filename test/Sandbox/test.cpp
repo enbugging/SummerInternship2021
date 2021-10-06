@@ -136,16 +136,14 @@ void input(string quantum_mechanic_data)
 		{
 			angles_id[i] = angles_id_dict[t1];
 		}
-		/*
 		else if (angles_id_dict.find(t2) != angles_id_dict.end())
 		{
 			angles_id[i] = angles_id_dict[t2];
 		}
-		*/
 		else
 		{
 			angles_id_dict[t1] = number_of_distinct_angles;
-			//angles_id_dict[t2] = number_of_distinct_angles;
+			angles_id_dict[t2] = number_of_distinct_angles;
 			angles_id[i] = number_of_distinct_angles;
 			distinct_angles_represent[number_of_distinct_angles] = t1;
 			number_of_distinct_angles++;
