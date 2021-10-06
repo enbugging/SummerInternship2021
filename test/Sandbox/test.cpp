@@ -37,8 +37,6 @@ map<string, int>
 	angles_id_dict;
 map<int, string>
 	distinct_angles_represent;
-
-ofstream log_file;
 	
 /* 
 --------------------------------------------------------------------------------------
@@ -138,14 +136,16 @@ void input(string quantum_mechanic_data)
 		{
 			angles_id[i] = angles_id_dict[t1];
 		}
+		/*
 		else if (angles_id_dict.find(t2) != angles_id_dict.end())
 		{
 			angles_id[i] = angles_id_dict[t2];
 		}
+		*/
 		else
 		{
 			angles_id_dict[t1] = number_of_distinct_angles;
-			angles_id_dict[t2] = number_of_distinct_angles;
+			//angles_id_dict[t2] = number_of_distinct_angles;
 			angles_id[i] = number_of_distinct_angles;
 			distinct_angles_represent[number_of_distinct_angles] = t1;
 			number_of_distinct_angles++;
@@ -315,166 +315,201 @@ double objective_function(
 	return result;
 }
 
+/* 
+Main function
+ */
+vector<double> optimization_scheme()
+{
+	//cerr << "1\n";
+	vector<double> main_force_constants = simulated_annealing(pre_objective_function, number_of_angles + 1, 1.0, 100000);
+	vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
+	set_of_force_constants[set_of_force_constants.size() - 1] = 
+	main_force_constants[main_force_constants.size() - 1];
+	for (int j = 0; j < number_of_angles; j++)
+	{
+		for (int k = 0; k < number_of_terms; k++)
+		{
+			if (multiplicities[k] == main_mult)
+			{	
+				set_of_force_constants[number_of_terms * j + k] = 
+				main_force_constants[j];
+				//cerr << "Main force constant " << j << ": " << main_force_constants[j] << '\n';
+			}
+		}
+	}
+	epsilon_main = rmse(
+		set_of_force_constants, 
+		energy, 
+		angles, 
+		multiplicities, 
+		number_of_data_points, 
+		number_of_angles, 
+		number_of_terms);
+	
+	//cerr << "2\n";
+	double sum_of_energy_square = 0;
+	for (int j = 0; j < number_of_data_points; j++)
+	{
+		sum_of_energy_square += energy[j] * energy[j];
+	}
+	w_total = 0.01 * sqrt(sum_of_energy_square)/(epsilon_main);
+	
+	weights.resize(number_of_angles);
+	double sum_of_weights = 0;
+	for (int j = 0; j < number_of_angles; j++)
+	{
+		weights[j].resize(number_of_terms);
+		for (int k = 0; k < number_of_terms; k++)
+		{
+			weights[j][k] = 
+				1.0 / (
+					abs(pearson_interact_vs_angles[j][k])
+					* magnitude_of_interaction[j] 
+					+ epsilon_0);
+			sum_of_weights += weights[j][k];
+		}
+	}
+	// normalization of weights
+	for (int j = 0; j < number_of_angles; j++)
+	{
+		for (int k = 0; k < number_of_terms; k++)
+		{
+			weights[j][k] /= sum_of_weights;
+		}
+	}
+
+	//cerr << "3\n";
+	vector<double> set_of_force_constants_reduced = simulated_annealing(objective_function, number_of_distinct_angles * number_of_terms + 1, 1.0);
+	return set_of_force_constants_reduced;
+}
+
+void output(
+	ostream& outstream, 
+	int& i, 
+	double& sum_error, 
+	double& prev_mean,
+	double& current_mean, 
+	double& M, 
+	vector<double>& set_of_force_constants_reduced)
+{
+	//cerr << "4\n";
+	// expand the set of force constants
+	vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
+	set_of_force_constants[set_of_force_constants.size() - 1] = 
+	set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
+	for (int j = 0; j < number_of_angles; j++)
+	{
+		for (int k = 0; k < number_of_terms; k++)
+		{
+			set_of_force_constants[number_of_terms * j + k] = 
+			set_of_force_constants_reduced[number_of_terms * angles_id[j] + k];
+		}
+	}
+	
+	//cerr << "5\n";
+	double error = rmse(
+		set_of_force_constants, 
+		energy, 
+		angles, 
+		multiplicities, 
+		number_of_data_points, 
+		number_of_angles, 
+		number_of_terms);
+	sum_error += error;
+	prev_mean = current_mean;
+	current_mean = (prev_mean * (i - 1) + error)/i;
+	M += (error - current_mean) * (error - prev_mean);
+	
+	//cerr << "6\n";
+	outstream << "Error: " 
+			<< error << '\n';
+	outstream << "Offset constant: " << set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1] << '\n';
+	outstream << "Force constants of type:\n";
+	for (int j = 0; j < number_of_distinct_angles; j++)
+	{
+		outstream << distinct_angles_represent[j] << ": ";
+		for (int k = 0; k < number_of_terms; k++)
+		{
+			string str = to_string(set_of_force_constants_reduced[j * number_of_terms + k]);
+			for (int l = 0; l < MAX_LENGTH - (int) str.length(); l++)
+			{
+				outstream << ' ';
+			}
+			outstream << str;
+		}
+		outstream << '\n';
+	}
+
+	//cerr << "7\n";
+	outstream << "Energy profile comparison\n";
+	outstream << " Reference|   Model|\n";
+
+	for (int i = 0; i < number_of_data_points; i++)
+	{
+		double energy_prediction = set_of_force_constants[set_of_force_constants.size()-1];
+		for (int j = 0; j < number_of_angles; j++)
+		{
+			double angle = angles[i][j];
+			for (int k = 0; k < number_of_terms; k++)
+			{
+				energy_prediction += 
+				set_of_force_constants[j * number_of_terms + k] * 
+				cos(multiplicities[k] * angle / 180.0 * M_PI);
+			}
+		}
+		string str = to_string(energy[i]);
+		for (int l = 0; l < MAX_LENGTH - (int) str.length(); l++)
+		{
+			outstream << ' ';
+		}
+		outstream << str;
+
+		str = to_string(energy_prediction);
+		for (int l = 0; l < MAX_LENGTH - (int) str.length(); l++)
+		{
+			outstream << ' ';
+		}
+		outstream << str << '\n';
+	}
+
+	outstream << "----------------------------------------------------\n";
+}
+
+void conclude(
+	ostream& outstream, 
+	double& sum_error,
+	int& trial,
+	double& M, 
+	chrono::high_resolution_clock::time_point t1, 
+	chrono::high_resolution_clock::time_point t2)
+{
+	outstream << "Error average: " << sum_error/trial << '\n';
+	outstream << "Standard deviation: " << M/(trial-1) << '\n';
+    outstream << "95% confidence interval:" << 1.960 * M/(trial-1)/sqrt(trial) << '\n';
+	outstream << "Total runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0 << '\n';
+}
+
 int main(int argc, char* argv[])
 {
+	/*
+	filebuf log_file;
 	log_file.open("log.txt");
+	ostream log_file_out(&log_file);
+	//*/
 	cerr << "START\n";
 	input(argv[1]);
 	correlation_preparation();
 	int trial = 2;
 	double sum_error = 0;
-	auto t1 = chrono::high_resolution_clock::now();
+	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 	double prev_mean = 0, current_mean = 0, M = 0;
 	for (int i = 1; i <= trial; i++)
 	{
-		//cerr << "1\n";
-		vector<double> main_force_constants = simulated_annealing(pre_objective_function, number_of_angles + 1, 1.0, 100000);
-		vector<double> set_of_force_constants(number_of_angles * number_of_terms + 1);
-		set_of_force_constants[set_of_force_constants.size() - 1] = 
-		main_force_constants[main_force_constants.size() - 1];
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				if (multiplicities[k] == main_mult)
-				{	
-					set_of_force_constants[number_of_terms * j + k] = 
-					main_force_constants[j];
-					//cerr << "Main force constant " << j << ": " << main_force_constants[j] << '\n';
-				}
-			}
-		}
-		epsilon_main = rmse(
-			set_of_force_constants, 
-			energy, 
-			angles, 
-			multiplicities, 
-			number_of_data_points, 
-			number_of_angles, 
-			number_of_terms);
-		
-		//cerr << "2\n";
-		double sum_of_energy_square = 0;
-		for (int j = 0; j < number_of_data_points; j++)
-		{
-			sum_of_energy_square += energy[j] * energy[j];
-		}
-		w_total = 0.01 * sqrt(sum_of_energy_square)/(epsilon_main);
-		
-		weights.resize(number_of_angles);
-		double sum_of_weights = 0;
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			weights[j].resize(number_of_terms);
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				weights[j][k] = 
-					1.0 / (
-						abs(pearson_interact_vs_angles[j][k])
-						* magnitude_of_interaction[j] 
-						+ epsilon_0);
-				sum_of_weights += weights[j][k];
-			}
-		}
-		// normalization of weights
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				weights[j][k] /= sum_of_weights;
-			}
-		}
-
-		//cerr << "3\n";
-		vector<double> set_of_force_constants_reduced = simulated_annealing(objective_function, number_of_distinct_angles * number_of_terms + 1, 1.0);
-		
-		//cerr << "4\n";
-		// expand the set of force constants
-		set_of_force_constants[set_of_force_constants.size() - 1] = 
-		set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1];
-		for (int j = 0; j < number_of_angles; j++)
-		{
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				set_of_force_constants[number_of_terms * j + k] = 
-				set_of_force_constants_reduced[number_of_terms * angles_id[j] + k];
-			}
-		}
-		
-		//cerr << "5\n";
-		double error = rmse(
-			set_of_force_constants, 
-			energy, 
-			angles, 
-			multiplicities, 
-			number_of_data_points, 
-			number_of_angles, 
-			number_of_terms);
-		sum_error += error;
-		prev_mean = current_mean;
-		current_mean = (prev_mean * (i - 1) + error)/i;
-		M += (error - current_mean) * (error - prev_mean);
-		
-		//cerr << "6\n";
-		log_file << "Error: " 
-				<< error << '\n';
-		log_file << "Offset constant: " << set_of_force_constants_reduced[set_of_force_constants_reduced.size() - 1] << '\n';
-		log_file << "Force constants of type:\n";
-		for (int j = 0; j < number_of_distinct_angles; j++)
-		{
-			log_file << distinct_angles_represent[j] << ": ";
-			for (int k = 0; k < number_of_terms; k++)
-			{
-				string out = to_string(set_of_force_constants_reduced[j * number_of_terms + k]);
-				for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
-				{
-					log_file << ' ';
-				}
-				log_file << out;
-			}
-			log_file << '\n';
-		}
-
-		//cerr << "7\n";
-		log_file << "Energy profile comparison\n";
-		log_file << " Reference|   Model|\n";
-
-		for (int i = 0; i < number_of_data_points; i++)
-		{
-			double energy_prediction = set_of_force_constants[set_of_force_constants.size()-1];
-			for (int j = 0; j < number_of_angles; j++)
-			{
-				double angle = angles[i][j];
-				for (int k = 0; k < number_of_terms; k++)
-				{
-					energy_prediction += 
-					set_of_force_constants[j * number_of_terms + k] * 
-					cos(multiplicities[k] * angle / 180.0 * M_PI);
-				}
-			}
-			string out = to_string(energy[i]);
-			for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
-			{
-				log_file << ' ';
-			}
-			log_file << out;
-
-			out = to_string(energy_prediction);
-			for (int l = 0; l < MAX_LENGTH - (int) out.length(); l++)
-			{
-				log_file << ' ';
-			}
-			log_file << out << '\n';
-		}
-
-		log_file << "----------------------------------------------------\n";
+		vector<double> set_of_force_constants_reduced = optimization_scheme();
+		//output(log_file_out, sum_error, prev_mean, current_mean, M, set_of_force_constants_reduced);
+		output(cout, i, sum_error, prev_mean, current_mean, M, set_of_force_constants_reduced);
 	}
-	log_file << "Error average: " << sum_error/trial << '\n';
-	log_file << "Standard deviation: " << M/(trial-1) << '\n';
-    log_file << "95% confidence interval:" << 1.960 * M/(trial-1)/sqrt(trial) << '\n';
-	auto t2 = chrono::high_resolution_clock::now();
-	log_file << "Total runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0 << '\n';
-	//log_file << "Average runtime: " << chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/1000.0/trial << '\n'; 
-	
-	log_file.close();
+	chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+	conclude(cout, sum_error, trial, M, t1, t2);
+	//log_file.close();
 }
