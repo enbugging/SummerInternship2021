@@ -587,6 +587,9 @@ int main(int argc, char* argv[])
 							   1.0, 
 							   10000)[0];
 
+		cerr << "Offset constant: "
+			 << set_of_force_constants[set_of_force_constants.size() - 1]
+			 << "\n";
 		cerr << "RMSE: "
 		     << rmse(set_of_force_constants, 
 					 energy, 
@@ -594,7 +597,8 @@ int main(int argc, char* argv[])
 					 multiplicities, 
 					 number_of_data_points, 
 					 number_of_angles, 
-					 6);
+					 6)
+			 << "\n";
 	}
 	else if (not strcmp(argv[1], "-r") || not strcmp(argv[1], "--run"))
 	{	
