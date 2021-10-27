@@ -32,11 +32,13 @@ vector<vector<double> >
 	weights;
 vector<double> 
 	energy,
-	magnitude_of_interaction;
+	magnitude_of_interaction, 
+	set_of_force_constants_without_offset_constant;
 map<string, int> 
 	angles_id_dict;
 map<int, string>
 	distinct_angles_represent;
+ofstream log_file;
 	
 /* 
 --------------------------------------------------------------------------------------
@@ -131,6 +133,7 @@ void input(string quantum_mechanic_data)
 			t1 = s[0] + ' ' + s[1] + ' ' + s[2] + ' ' + s[3],
 			t2 = s[3] + ' ' + s[2] + ' ' + s[1] + ' ' + s[0];
 		
+		cerr << t1 << ' ' << t2 << '\n';
 		// get id of the angle
 		if (angles_id_dict.find(t1) != angles_id_dict.end())
 		{
@@ -313,6 +316,25 @@ double objective_function(
 	return result;
 }
 
+double RMSE_with_respect_to_offset_constant(
+	vector<double>& offset_constant)
+{
+	vector<double> set_of_force_constants(number_of_angles * 6 + 1);
+	for (int i = 0; i < (int) set_of_force_constants_without_offset_constant.size(); i++)
+	{
+		set_of_force_constants[i] = set_of_force_constants_without_offset_constant[i];
+	}
+	set_of_force_constants[set_of_force_constants.size() - 1] = offset_constant[0];
+	return rmse(set_of_force_constants, 
+				energy, 
+				angles, 
+				multiplicities, 
+				number_of_data_points, 
+				number_of_angles, 
+				6);
+}
+
+
 /* 
 Main function
  */
@@ -475,9 +497,9 @@ void output(
 
 void conclude(
 	ostream& outstream, 
-	double& sum_error,
-	int& trial,
-	double& M, 
+	double sum_error,
+	int trial,
+	double M, 
 	chrono::high_resolution_clock::time_point t1, 
 	chrono::high_resolution_clock::time_point t2)
 {
@@ -489,25 +511,157 @@ void conclude(
 
 int main(int argc, char* argv[])
 {
-	/*
-	filebuf log_file;
-	log_file.open("log.txt");
-	ostream log_file_out(&log_file);
-	//*/
-	cerr << "START\n";
-	input(argv[1]);
-	correlation_preparation();
-	int trial = 2;
-	double sum_error = 0;
-	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
-	double prev_mean = 0, current_mean = 0, M = 0;
-	for (int i = 1; i <= trial; i++)
+	if (not strcmp(argv[1], "-h") || not strcmp(argv[1], "--help"))
 	{
-		vector<double> set_of_force_constants_reduced = optimization_scheme();
-		//output(log_file_out, sum_error, prev_mean, current_mean, M, set_of_force_constants_reduced);
-		output(cout, i, sum_error, prev_mean, current_mean, M, set_of_force_constants_reduced);
+		cerr << "Usage: <BIN_FILE_PATH>\n"
+			 << "[-h|--help]\n"
+			 << "[-t|--test <DATA_PATH> <FORCE_CONSTANTS_PATH>]\n"
+			 << "[-r|--run <DATA_PATH>]\n"
+			 << "[-r|--run <DATA_PATH> <LOG_FILE_PATH>]\n";
 	}
-	chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
-	conclude(cout, sum_error, trial, M, t1, t2);
-	//log_file.close();
+	else if (not strcmp(argv[1], "-t") || not strcmp(argv[1], "--test"))
+	{
+		if (argc < 4)
+		{
+			cerr << "Bad arguments: At least 4 arguments expected. Type -h or --help for complete guide.\n";
+			return 1;
+		}
+		input(argv[2]);
+
+		// initialize input stream
+		ifstream force_constants_file;
+		force_constants_file.open(argv[3]);
+		
+		vector<double> set_of_force_constants_reduced(number_of_distinct_angles * 6);
+		for (int i = 0; i < number_of_distinct_angles; i++)
+		{
+			// angle representation
+			int idx;
+			vector<string> s(4);
+			force_constants_file >> s[0] >> s[1] >> s[2] >> s[3];
+			string 
+				t1 = s[0] + ' ' + s[1] + ' ' + s[2] + ' ' + s[3],
+				t2 = s[3] + ' ' + s[2] + ' ' + s[1] + ' ' + s[0];
+			
+			// get id of the angle
+			if (angles_id_dict.find(t1) != angles_id_dict.end())
+			{
+				idx = angles_id_dict[t1];
+			}
+			else if (angles_id_dict.find(t2) != angles_id_dict.end())
+			{
+				idx = angles_id_dict[t2];
+			}
+			else
+			{
+				cerr << "Unknown angle types. Please check the force constants file and try again.\n";
+				return 1;
+			}
+
+			for (int j = 0; j < 6; j++)
+			{
+				force_constants_file >> set_of_force_constants_reduced[idx * 6 + j];
+			}
+		}
+
+		// expand the set of force constants
+		set_of_force_constants_without_offset_constant.resize(number_of_angles * 6);
+		for (int j = 0; j < number_of_angles; j++)
+		{
+			for (int k = 0; k < 6; k++)
+			{
+				set_of_force_constants_without_offset_constant[6 * j + k] = 
+				set_of_force_constants_reduced[6 * angles_id[j] + k];
+			}
+		}
+		
+		vector<double> set_of_force_constants(number_of_angles * 6 + 1);
+		for (int i = 0; i < (int) set_of_force_constants_without_offset_constant.size(); i++)
+		{
+			set_of_force_constants[i] = set_of_force_constants_without_offset_constant[i];
+		}
+		// find best offset constant
+		set_of_force_constants[set_of_force_constants.size() - 1]
+		 = simulated_annealing(RMSE_with_respect_to_offset_constant, 
+		 					   1, 
+							   1.0, 
+							   10000)[0];
+
+		cerr << "RMSE: "
+		     << rmse(set_of_force_constants, 
+					 energy, 
+					 angles, 
+					 multiplicities, 
+					 number_of_data_points, 
+					 number_of_angles, 
+					 6);
+	}
+	else if (not strcmp(argv[1], "-r") || not strcmp(argv[1], "--run"))
+	{	
+		if (argc <= 2)
+		{
+			cerr << "Bad arguments: At least 3 arguments expected. Type -h or --help for complete guide.\n";
+			return 1;
+		}
+		if (argc > 3)
+		{
+			log_file.open(argv[3]);
+		}
+		cerr << "START\n";
+		input(argv[2]);
+		correlation_preparation();
+		int trial = 2;
+		double sum_error = 0;
+		chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+		double prev_mean = 0, current_mean = 0, M = 0;
+		for (int i = 1; i <= trial; i++)
+		{
+			vector<double> set_of_force_constants_reduced = optimization_scheme();
+			if (argc > 3)
+			{
+				output(log_file, 
+					   i, 
+					   sum_error, 
+					   prev_mean, 
+					   current_mean, 
+					   M, 
+					   set_of_force_constants_reduced);
+			}
+			else
+			{
+				output(cout, 
+					   i, 
+					   sum_error, 
+					   prev_mean, 
+					   current_mean, 
+					   M, 
+					   set_of_force_constants_reduced);
+			}
+		}
+		chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+		if (argc > 3)
+		{
+			conclude(log_file, 
+					 sum_error, 
+					 trial, 
+					 M, 
+					 t1, 
+					 t2);
+			log_file.close();
+		}
+		else
+		{
+			conclude(cout, 
+					 sum_error, 
+					 trial, 
+					 M, 
+					 t1, 
+					 t2);
+		}
+		cerr << "FINISH\n";
+	}
+	else
+	{
+		cerr << "Unknown command. Type -h or --help for complete guide.\n";
+	}
 }
