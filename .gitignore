@@ -2,4 +2,4 @@ bin
 misc
 .vscode
 .spyproject
-.CMakeFiles
+CMakeFiles
