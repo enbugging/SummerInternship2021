@@ -3,9 +3,9 @@
 
 using namespace std;
 
-#include "../../src/ExtremaFinding/GlobalMinimumFinder.h"
-#include "../../src/ObjectiveFunctions/ObjectiveFunctions.h"
-#include "../../src/SimplicityAccuracy/SimplicityAccuracy.h"
+#include "../lib/ExtremaFinding/GlobalMinimumFinder.h"
+#include "../lib/ObjectiveFunctions/ObjectiveFunctions.h"
+#include "../lib/SimplicityAccuracy/SimplicityAccuracy.h"
 
 //string quantum_mechanic_data = "ethane_dihe_c1_c2.dat";
 //string quantum_mechanic_data = "propane_dihe_c1_c2.dat";
